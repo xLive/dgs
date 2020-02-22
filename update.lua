@@ -36,12 +36,22 @@ function checkUpdate()
 			if not ManualUpdate then
 				if RemoteVersion > Version then
 					outputDebugString("[DGS]Remote Version Got [Remote:"..data.." Current:"..allstr.."].")
-					outputDebugString("[DGS]Update? Command: updatedgs")
+					if dgsConfig.updateAutoUpdate then 
+						outputChatBox("[DGS]Preparing for updating dgs (Auto Update)",root,0,255,0)
+						startUpdate()
+					else
+						outputDebugString("[DGS]Update? Command: updatedgs")
+					end
 					if isTimer(updateTimer) then killTimer(updateTimer) end
 					updateTimer = setTimer(function()
 						if RemoteVersion > Version then
 							outputDebugString("[DGS]Remote Version Got [Remote:"..RemoteVersion.." Current:"..allstr.."].")
-							outputDebugString("[DGS]Update? Command: updatedgs")
+							if dgsConfig.updateAutoUpdate then 
+								outputChatBox("[DGS]Preparing for updating dgs (Auto Update)",root,0,255,0)
+								startUpdate()
+							else
+								outputDebugString("[DGS]Update? Command: updatedgs")
+							end
 						else
 							killTimer(updateTimer)
 						end
@@ -208,8 +218,17 @@ function DownloadFinish()
 	end
 	recoverStyleMapper()
 	outputDebugString("[DGS]Update Complete (Updated "..#preUpdate.." Files)")
-	outputDebugString("[DGS]Please Restart DGS")
 	outputChatBox("[DGS]Update Complete (Updated "..#preUpdate.." Files)",root,0,255,0)
+	if dgsConfig.updateAutoRestart then 
+		if hasObjectPermissionTo(getThisResource(),"function.restartResource",true) then
+			restartResource (getThisResource())
+		else
+			outputDebugString("[DGS]Request 'restartResource', but access denied. Use the command 'aclrequest allow dgs all'",2)
+			outputDebugString("[DGS]Please Restart DGS")
+		end
+	else
+		outputDebugString("[DGS]Please Restart DGS")
+	end
 	preUpdate = {}
 	preUpdateCount = 0
 	UpdateCount = 0

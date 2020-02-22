@@ -601,6 +601,7 @@
 	<aclrequest>
 		<right name="function.fetchRemote" access="true" />
 		<right name="function.getClientIP" access="true" />
+		<right name="function.restartResource" access="true" />
 	</aclrequest>
 	<download_priority_group>999</download_priority_group>
 </meta>
