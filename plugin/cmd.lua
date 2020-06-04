@@ -10,8 +10,8 @@ function dgsCreateCmd(x,y,sx,sy,relative,parent)
 	dgsMemoSetReadOnly(cmdMemo,true)
 	dgsSetData(cmdMemo,"asPlugin","dgs-dxcmd")
 	dgsSetData(cmdMemo,"readOnlyCaretShow",true)
-	dgsSetData(cmdMemo,"textSize",{1.4,1.4})
-	dgsMemoSetWordWarpState(cmdMemo,true)
+	dgsSetData(cmdMemo,"textSize",{1.3,1.3})
+	dgsMemoSetWordWrapState(cmdMemo,true)
 	dgsSetData(cmdMemo,"bgColor",tocolor(0,0,0,180))
 	dgsSetData(cmdMemo,"textColor",tocolor(255,255,255,255))
 	dgsSetData(cmdMemo,"caretColor",tocolor(255,255,255,255))
@@ -24,7 +24,7 @@ function dgsCreateCmd(x,y,sx,sy,relative,parent)
 	dgsSetData(cmdMemo,"cmdCurrentHistory",0)
 	local sx,sy = dgsGetSize(cmdMemo,false)
 	local edit = dgsCreateEdit(0,0,sx,20,"",false,cmdMemo,tocolor(255,255,255,255))
-	dgsSetData(edit,"textSize",{1.4,1.4})
+	dgsSetData(edit,"textSize",{1.3,1.3})
 	dgsSetFont(edit,"arial")
 	addEventHandler("onDgsEditAccepted",edit,function()
 		local cmd = dgsElementData[source].mycmd
@@ -36,13 +36,28 @@ function dgsCreateCmd(x,y,sx,sy,relative,parent)
 			end
 		end
 	end,false)
-	
+	for k,v in pairs(eventHandlers) do
+		dgsEditAddAutoComplete(edit,k,false)
+	end
 	dgsSetSide(edit,"bottom","tob")
 	dgsSetData(cmdMemo,"cmdEdit",edit)
 	dgsSetData(cmdMemo,"hitoutofparent",true)
 	dgsSetData(edit,"cursorStyle",1)
 	dgsSetData(edit,"cursorThick",1.2)
 	dgsSetData(edit,"mycmd",cmdMemo)
+	addEventHandler("onDgsTextChange",edit,function()
+		local text = dgsElementData[source].text
+		local parent = dgsElementData[source].mycmd
+		if isElement(parent) then
+			if dgsGetPluginType(parent) == "dgs-dxcmd" then
+				local hisid = dgsElementData[parent].cmdCurrentHistory
+				local history = dgsElementData[parent].cmdHistory
+				if history[hisid] ~= text then
+					dgsSetData(parent,"cmdCurrentHistory",0)
+				end
+			end
+		end
+	end,false)
 	triggerEvent("onDgsPluginCreate",cmdMemo,sourceResource)
 	return cmdMemo
 end
@@ -144,7 +159,7 @@ end
 
 function outputCmdMessage(cmd,str)
 	assert(dgsGetPluginType(cmd) == "dgs-dxcmd","Bad argument @outputCmdMessage at argument 1, expect plugin dgs-dxcmd [ got "..dgsGetPluginType(cmd).." ]")
-	dgsMemoAppendText(cmd,str,true)
+	dgsMemoAppendText(cmd,str.."\n",true)
 	local textTable = dgsElementData[cmd].text
 	dgsMemoSetCaretPosition(cmd,textTable[#textTable][-1])
 end

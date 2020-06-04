@@ -1,3 +1,20 @@
+--Dx Functions
+local dxDrawLine = dxDrawLine
+local dxDrawImage = dxDrawImageExt
+local dxDrawImageSection = dxDrawImageSectionExt
+local dxDrawText = dxDrawText
+local dxGetFontHeight = dxGetFontHeight
+local dxDrawRectangle = dxDrawRectangle
+local dxSetShaderValue = dxSetShaderValue
+local dxGetPixelsSize = dxGetPixelsSize
+local dxGetPixelColor = dxGetPixelColor
+local dxSetRenderTarget = dxSetRenderTarget
+local dxGetTextWidth = dxGetTextWidth
+local dxSetBlendMode = dxSetBlendMode
+--
+local assert = assert
+local lerp = math.lerp
+--
 function dgsCreateScrollPane(x,y,sx,sy,relative,parent)
 	assert(tonumber(x),"Bad argument @dgsCreateScrollPane at argument 1, expect number got "..type(x))
 	assert(tonumber(y),"Bad argument @dgsCreateScrollPane at argument 2, expect number got "..type(y))
@@ -15,19 +32,21 @@ function dgsCreateScrollPane(x,y,sx,sy,relative,parent)
 	calculateGuiPositionSize(scrollpane,x,y,relative or false,sx,sy,relative or false,true)
 	local sx,sy = dgsElementData[scrollpane].absSize[1],dgsElementData[scrollpane].absSize[2]
 	local x,y = dgsElementData[scrollpane].absPos[1],dgsElementData[scrollpane].absPos[2]
-	local renderTarget = dxCreateRenderTarget(sx,sy,true)
-	if not isElement(renderTarget) then
-		local videoMemory = dxGetStatus().VideoMemoryFreeForMTA
-		outputDebugString("Failed to create render target for dgs-dxscrollpane [Expected:"..(0.0000076*sx*sy).."MB/Free:"..videoMemory.."MB]",2)
-	end
+	local renderTarget = dxCreateRenderTarget(sx,sy,true,scrollpane)
+	dgsAttachToAutoDestroy(renderTarget,scrollpane,1)
 	dgsSetData(scrollpane,"renderTarget_parent",renderTarget)
 	dgsSetData(scrollpane,"maxChildSize",{0,0})
+	dgsSetData(scrollpane,"horizontalMoveOffsetTemp",0)
+	dgsSetData(scrollpane,"verticalMoveOffsetTemp",0)
+	dgsSetData(scrollpane,"moveHardness",0.1)
+	--dgsSetData(scrollpane,"childSizeRef",{{},{}}) --Horizontal,Vertical //to optimize
 	dgsSetData(scrollpane,"scrollBarState",{nil,nil},true) --true: force on; false: force off; nil: auto
 	dgsSetData(scrollpane,"configNextFrame",false)
 	dgsSetData(scrollpane,"mouseWheelScrollBar",false) --false:vertical; true:horizontal
 	dgsSetData(scrollpane,"scrollBarLength",{},true)
 	dgsSetData(scrollpane,"bgColor",false)
 	dgsSetData(scrollpane,"bgImage",false)
+	dgsSetData(scrollpane,"sourceTexture",false)
 	local titleOffset = 0
 	if isElement(parent) then
 		if not dgsElementData[scrollpane].ignoreParentTitle and not dgsElementData[parent].ignoreTitle then
@@ -36,6 +55,8 @@ function dgsCreateScrollPane(x,y,sx,sy,relative,parent)
 	end
 	local scrollbar1 = dgsCreateScrollBar(x+sx-scbThick,y-titleOffset,scbThick,sy-scbThick,false,false,parent)
 	local scrollbar2 = dgsCreateScrollBar(x,y+sy-scbThick-titleOffset,sx-scbThick,scbThick,true,false,parent)
+	dgsAttachToAutoDestroy(scrollbar1,scrollpane,2)
+	dgsAttachToAutoDestroy(scrollbar2,scrollpane,3)
 	dgsSetVisible(scrollbar1,false)
 	dgsSetVisible(scrollbar2,false)
 	dgsSetData(scrollpane,"scrollSize",60)	--60 pixels
@@ -50,6 +71,8 @@ function dgsCreateScrollPane(x,y,sx,sy,relative,parent)
 	dgsSetData(scrollbar2,"length",{0,true})
 	dgsSetData(scrollbar1,"multiplier",{1,true})
 	dgsSetData(scrollbar2,"multiplier",{1,true})
+	dgsSetData(scrollbar1,"minLength",10)
+	dgsSetData(scrollbar2,"minLength",10)
 	addEventHandler("onDgsElementScroll",scrollbar1,checkSPScrollBar,false)
 	addEventHandler("onDgsElementScroll",scrollbar2,checkSPScrollBar,false)
 	triggerEvent("onDgsCreate",scrollpane,sourceResource)
@@ -68,29 +91,7 @@ addEventHandler("onDgsCreate",root,function()
 			sx,sy = dgsElementData[source].rltSize[1],dgsElementData[source].rltSize[2]
 		end
 		calculateGuiPositionSize(source,x,y,relativePos or _,sx,sy,relativeSize or _)
-		local sx,sy = dgsElementData[source].absSize[1],dgsElementData[source].absSize[2]
-		local x,y = dgsElementData[source].absPos[1],dgsElementData[source].absPos[2]
-		local maxSize = dgsElementData[parent].maxChildSize
-		local tempx,tempy = x+sx,y+sy
-		local ntempx,ntempy
-		if maxSize[1] <= tempx then
-			ntempx = 0
-			for k,v in ipairs(dgsGetChildren(parent)) do
-				local pos = dgsElementData[source].absPos
-				local size = dgsElementData[source].absSize
-				ntempx = ntempx > pos[1]+size[1] and ntempx or pos[1]+size[1]
-			end
-		end
-		if maxSize[2] <= tempy then
-			ntempy = 0
-			for k,v in ipairs(dgsGetChildren(parent)) do
-				local pos = dgsElementData[source].absPos
-				local size = dgsElementData[source].absSize
-				ntempy = ntempy > pos[2]+size[2] and ntempy or pos[2]+size[2]	
-			end
-		end
-		dgsSetData(parent,"maxChildSize",{ntempx or maxSize[1],ntempy or maxSize[2]})
-		dgsSetData(parent,"configNextFrame",true)
+		resizeScrollPane(parent,source)
 	end
 end)
 
@@ -168,7 +169,6 @@ function configScrollPane(source)
 	if scbStateV and scbStateV ~= oriScbStateV then
 		dgsSetData(scrollbar[1],"position",0)
 	end
-	local scrollBarOffset = dgsElementData[source].scrollBarOffset
 	dgsSetVisible(scrollbar[1],scbStateV and true or false)
 	dgsSetVisible(scrollbar[2],scbStateH and true or false)
 	dgsElementData[scrollbar[1]].ignoreParentTitle = dgsElementData[source].ignoreParentTitle
@@ -207,51 +207,31 @@ function configScrollPane(source)
 		destroyElement(renderTarget)
 		dgsElementData[source].renderTarget = nil
 	end
-	local renderTarget = dxCreateRenderTarget(relSizX,relSizY,true)
-	if not isElement(renderTarget) then
-		local videoMemory = dxGetStatus().VideoMemoryFreeForMTA
-		outputDebugString("Failed to create render target for dgs-dxscrollpane [Expected:"..(0.0000076*relSizX*relSizY).."MB/Free:"..videoMemory.."MB]",2)
-	end
+	local renderTarget = dxCreateRenderTarget(relSizX,relSizY,true,source)
+	dgsAttachToAutoDestroy(renderTarget,source,1)
 	dgsSetData(source,"renderTarget_parent",renderTarget)
 	dgsSetData(source,"configNextFrame",false)
 end
 
-function sortScrollPane(source,parent)
-	local sx,sy = dgsElementData[source].absSize[1],dgsElementData[source].absSize[2]
-	local x,y = dgsElementData[source].absPos[1],dgsElementData[source].absPos[2]
-	local maxSize = dgsElementData[parent].maxChildSize
-	local tempx,tempy = x+sx,y+sy
-	local ntempx,ntempy
-	if maxSize[1] <= tempx then
-		ntempx = tempx
-	else
-		ntempx = 0
-		local children = ChildrenTable[parent]
+function resizeScrollPane(scrollpane,source) --Need optimize
+	local abspos = dgsElementData[source].absPos
+	local abssize = dgsElementData[source].absSize
+	if abspos and abssize then
+		local x,y,sx,sy = abspos[1],abspos[2],abssize[1],abssize[2]
+		local maxSize = dgsElementData[scrollpane].maxChildSize
+		local ntempx,ntempy = 0,0
+		local children = ChildrenTable[scrollpane] or {}
 		local childrenCnt = #children
-		for i=1,childrenCnt do
-			local child = children[i]
+		for k=1,#children do
+			local child = children[k]
 			local pos = dgsElementData[child].absPos
 			local size = dgsElementData[child].absSize
 			ntempx = ntempx > pos[1]+size[1] and ntempx or pos[1]+size[1]
+			ntempy = ntempy > pos[2]+size[2] and ntempy or pos[2]+size[2]	
 		end
+		dgsSetData(scrollpane,"maxChildSize",{ntempx or maxSize[1],ntempy or maxSize[2]})
 	end
-	if maxSize[2] <= tempy then
-		ntempy = tempy
-	else
-		ntempy = 0
-		local children = ChildrenTable[parent]
-		local childrenCnt = #children
-		for i=1,childrenCnt do
-			local child = children[i]
-			local pos = dgsElementData[child].absPos
-			local size = dgsElementData[child].absSize
-			ntempy = ntempy > pos[2]+size[2] and ntempy or pos[2]+size[2]
-		end
-	end
-	maxSize[1] = ntempx or maxSize[1]
-	maxSize[2] = ntempy or maxSize[2]
-	dgsSetData(parent,"maxChildSize",maxSize)
-	dgsSetData(parent,"configNextFrame",true)
+	dgsSetData(scrollpane,"configNextFrame",true)
 end
 
 function dgsScrollPaneGetScrollBar(scrollpane)
@@ -362,3 +342,109 @@ function checkSPScrollBar(scb,new,old)
 		end
 	end
 end
+
+----------------------------------------------------------------
+--------------------------Renderer------------------------------
+----------------------------------------------------------------
+dgsRenderer["dgs-dxscrollpane"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,parentAlpha,isPostGUI,rndtgt)
+	if eleData.configNextFrame then
+		configScrollPane(source)
+	end
+	local scrollbar = eleData.scrollbars
+	local scbThick = eleData.scrollBarThick
+	local scbstate = {dgsElementData[scrollbar[1]].visible,dgsElementData[scrollbar[2]].visible}
+	local xthick = scbstate[1] and scbThick or 0
+	local ythick = scbstate[2] and scbThick or 0
+	local maxSize = eleData.maxChildSize
+	local relSizX,relSizY = w-xthick,h-ythick
+	local maxX,maxY = (maxSize[1]-relSizX),(maxSize[2]-relSizY)
+	maxX,maxY = maxX > 0 and maxX or 0,maxY > 0 and maxY or 0
+	local _OffsetX = -maxX*dgsElementData[scrollbar[2]].position*0.01
+	local _OffsetY = -maxY*dgsElementData[scrollbar[1]].position*0.01
+	local OffsetX = lerp(eleData.moveHardness,eleData.horizontalMoveOffsetTemp,_OffsetX)
+	local OffsetY = lerp(eleData.moveHardness,eleData.verticalMoveOffsetTemp,_OffsetY)
+	eleData.horizontalMoveOffsetTemp = OffsetX
+	eleData.verticalMoveOffsetTemp = OffsetY
+	if OffsetX > 0 then
+		OffsetX = 0
+	end
+	if OffsetY > 0 then
+		OffsetY = 0
+	end
+	------------------------------------
+	if eleData.functionRunBefore then
+		local fnc = eleData.functions
+		if type(fnc) == "table" then
+			fnc[1](unpack(fnc[2]))
+		end
+	end
+	------------------------------------
+	local newRndTgt = eleData.renderTarget_parent
+	if newRndTgt then
+		dxSetRenderTarget(rndtgt)
+		local bgColor = eleData.bgColor
+		dxSetBlendMode(rndtgt and "modulate_add" or "blend")
+		if eleData.bgImage then
+			bgColor = bgColor or 0xFFFFFFFF
+			dxDrawImage(x,y,relSizX,relSizY,eleData.bgImage,0,0,0,tocolor(255,255,255,255*parentAlpha),isPostGUI)
+			bgColor = applyColorAlpha(bgColor,parentAlpha)
+		elseif eleData.bgColor then
+			bgColor = applyColorAlpha(bgColor,parentAlpha)
+			dxDrawRectangle(x,y,relSizX,relSizY,bgColor,isPostGUI)
+		end
+		dxSetBlendMode("add")
+		local filter = eleData.filter
+		local drawTarget = newRndTgt
+		if filter then
+			if type(filter) == "table" and isElement(filter[1]) then
+				if eleData.sourceTexture ~= newRndTgt then
+					dxSetShaderValue(filter[1],"sourceTexture",newRndTgt)
+					eleData.sourceTexture = newRndTgt
+				end
+				dxSetShaderTransform(filter[1],filter[2],filter[3],filter[4],filter[5],filter[6],filter[7],filter[8],filter[9],filter[10],filter[11])
+				drawTarget = filter[1]
+			elseif isElement(filter) then
+				if eleData.sourceTexture ~= newRndTgt then
+					dxSetShaderValue(filter,"sourceTexture",newRndTgt)
+					dxSetShaderValue(filter,"textureLoad",true)
+					eleData.sourceTexture = newRndTgt
+				end
+				drawTarget = filter
+			end
+		else
+			eleData.sourceTexture = false
+		end
+		dxDrawImage(x,y,relSizX,relSizY,drawTarget,0,0,0,tocolor(255,255,255,255*parentAlpha),isPostGUI)
+	end
+	dxSetBlendMode(rndtgt and "modulate_add" or "blend")
+	dxSetRenderTarget(newRndTgt,true)
+	rndtgt = newRndTgt
+	dxSetRenderTarget(rndtgt)
+	if enabled[1] and mx then
+		if mx >= cx and mx<= cx+w and my >= cy and my <= cy+h then
+			MouseData.scrollPane = source
+			MouseData.hit = source
+			if mx >= cx+relSizX and my >= cy+relSizY and scbstate[1] and scbstate[2] then
+				enabled[1] = false
+			end
+		else
+			MouseData.scrollPane = false
+			enabled[1] = false
+		end
+	end
+	return rndtgt,_,_,_,OffsetX,OffsetY
+end
+----------------------------------------------------------------
+-------------------------OOP Class------------------------------
+----------------------------------------------------------------
+dgsOOP["dgs-dxscrollpane"] = [[
+	getScrollBar = dgsOOP.genOOPFnc("dgsScrollPaneGetScrollBar"),
+	setScrollPosition = dgsOOP.genOOPFnc("dgsScrollPaneSetScrollPosition",true),
+	getScrollPosition = dgsOOP.genOOPFnc("dgsScrollPaneGetScrollPosition"),
+	setHorizontalScrollPosition = dgsOOP.genOOPFnc("dgsScrollPaneSetHorizontalScrollPosition",true),
+	getHorizontalScrollPosition = dgsOOP.genOOPFnc("dgsScrollPaneGetHorizontalScrollPosition"),
+	setVerticalScrollPosition = dgsOOP.genOOPFnc("dgsScrollPaneSetVerticalScrollPosition",true),
+	getVerticalScrollPosition = dgsOOP.genOOPFnc("dgsScrollPaneGetVerticalScrollPosition"),
+	setScrollBarState = dgsOOP.genOOPFnc("dgsScrollPaneSetScrollBarState",true),
+	getScrollBarState = dgsOOP.genOOPFnc("dgsScrollPaneGetScrollBarState"),
+]]

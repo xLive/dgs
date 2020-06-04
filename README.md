@@ -36,6 +36,20 @@ To prevent bugs and issues with the resource, keep the resource names as **dgs**
 The reason why I released DGS is because I am ready to leave MTA. This is my one contribution to the MTA community.
 Finally, I am glad to provide the DGS resource, and everyone is welcome to adjust the code and help make it better by editting the code, adding functions or events.
 
+# Commands
+all comands type it on F8 console
+* **dgscmd:**  to show you serial and version etc. type help  on it to see all comands on it.
+  * **help:**  to list the available commands in cmd.
+* **aboutdgs:** to show eveything about dgs to work this comand must be **connected to internet**.
+* **updatedgs:** to download the **last verion of dgs** ***Request Admin Rights***.
+* **dgsver:** to show version dgs on **debugscript** and **game console**.
+* **debugdgs:** to enable the debug message of DGS.
+  * **debugdgs 2:** further debug message.
+
+
+
+
+
 **Thanks for your support.**
 
 # License
@@ -46,10 +60,8 @@ This resource is protected by **DPL v1**(DGS Public License v1)
 
 * 1.Any of the private edition of dgs should be the branch of dgs-master
 
-* 2.You are not allowed to republish your edition of dgs.
+* 2.You are not permitted to republish any edition of dgs.
 
-* 3.You are encouraged to edit the dgs code.
+* 3.You are not permitted to sell DGS. This menas you should exclude DGS from your price when you are going to sell your DGS based scripts.
 
-* 4.Selling DGS is not allowed. This menas you should exclude DGS from your price when you are going to sell your DGS based scripts.
-
-* 5.Items not mentioned are allowed!
+* 4.Items not mentioned are allowed!

@@ -1,28 +1,94 @@
 dgsExportedFunctionName = {}
 dgsResName = getResourceName(getThisResource())
-local metafile = xmlLoadFile("meta.xml")
-local nodes = xmlNodeGetChildren(metafile)
 
 addEventHandler("onClientResourceStart",resourceRoot,function()
 	triggerEvent("onDgsStart",resourceRoot,dgsResName)
 end)
 
-for k,v in ipairs(nodes) do
-	if xmlNodeGetName(v) == "export" then
-		local func = xmlNodeGetAttribute(v,"function")
-		local typ = xmlNodeGetAttribute(v,"type")
-		if typ == "client" or typ == "shared" then
-			dgsExportedFunctionName[func] = func
+function dgsConfigureTDX()
+	local tdx = getResourceName(sourceResource)
+	
+	return [[
+		---
+		addEvent("onDgsRenderTDX",true)
+		local DGSResName = "]]..getResourceName(getThisResource())..[["
+		exports[DGSResName]:dgsSetRenderSetting("postGUI",false)	--for compatibility for TDX
+		local __addEventHandler = addEventHandler
+		local __removeEventHandler = removeEventHandler
+		local DGSTDXRef = {}
+		local TDXDGSRef = {}
+		local TDXClassFncRef = {}
+		local DGSTDXQueue = {
+			onClientRender={},
+			onClientPreRender={},
+		}
+		local eventRep = {
+			onClientRender		=	"DGSI_onClientRender_",
+			onClientPreRender	=	"DGSI_onClientPreRender_",
+		}
+		DGSConfigured = true
+		function addEventHandler(eventN,sourceEle,fnc,...)
+			if eventRep[eventN] then
+				DGSTDXQueue[eventN][fnc] = true
+			end
+			eventN = eventRep[eventN] or eventN
+			return __addEventHandler(eventN,sourceEle,fnc,...)
 		end
-	end
-end
-
-function dgsGetExportedFunctionName(name)
-	if name then
-		return dgsExportedFunctionName[name]
-	else
-		return dgsExportedFunctionName
-	end
+		
+		function removeEventHandler(eventN,sourceEle,fnc,...)
+			if eventRep[eventN] then
+				DGSTDXQueue[eventN][fnc] = nil
+			end
+			eventN = eventRep[eventN] or eventN
+			return __addEventHandler(eventN,sourceEle,fnc,...)
+		end
+		
+		local _new = new
+		local _delete = delete
+		local _getPrivateMethod = getPrivateMethod
+		local _DxElementBringToFront = DxElement.bringToFront
+		local _DxElementSendToBack = DxElement.sendToBack
+		DxElement.bringToFront = function(self,...)
+			_DxElementBringToFront(self,...)
+			if TDXDGSRef[self] then
+				exports[DGSResName]:dgsBringToFront(TDXDGSRef[self])
+			end
+		end
+		DxElement.sendToBack = function(self,...)
+			_DxElementSendToBack(self,...)
+			if TDXDGSRef[self] then
+				exports[DGSResName]:dgsMoveToBack(TDXDGSRef[self])
+			end
+		end
+		new = function(...)
+			local result = _new(...)
+			TDXDGSRef[result] = exports[DGSResName]:dgsCreateExternal(_,_,"onDgsRenderTDX")
+			DGSTDXRef[ TDXDGSRef[result] ] = result
+			result.dgsElement = TDXDGSRef[result]
+			return result
+		end
+		delete = function(self,...)
+			if isElement(TDXDGSRef[self]) then
+				DGSTDXRef[ TDXDGSRef[self] ] = nil
+				destroyElement(TDXDGSRef[self])
+				TDXDGSRef[self] = nil
+				TDXClassFncRef[self] = nil
+			end
+			return _delete(self,...)
+		end
+		
+		addEventHandler("onDgsRenderTDX",root,function()
+			local self = DGSTDXRef[source]
+			local renderFnc = getPrivateMethod(self, "render")
+			local prerenderFnc = getPrivateMethod(self, "prerender")
+			if DGSTDXQueue["onClientPreRender"][prerenderFnc] then
+				prerenderFnc()
+			end
+			if DGSTDXQueue["onClientRender"][renderFnc] then
+				renderFnc()
+			end
+		end)
+	]]
 end
 
 function dgsImportFunction(name,nameAs)
@@ -72,8 +138,8 @@ function dgsImportFunction(name,nameAs)
 			end
 		end
 		]]
-		for k,v in pairs(dgsExportedFunctionName) do
-			allCode = allCode.."\n "..k.." = DGS."..k..";"
+		for i,name in ipairs(getResourceExportedFunctions()) do
+			allCode = allCode.."\n "..name.." = DGS."..name..";"
 		end
 		return allCode
 	else
@@ -85,7 +151,8 @@ end
 
 function dgsG2DLoadHooker()
 	return [[
-		local isGUIGridList = {}
+		if isGUIGridList then return end
+		isGUIGridList = {}
 		loadstring(exports.dgs:dgsImportFunction())()
 		_guiBringToFront = guiBringToFront
 		_guiCreateFont = guiCreateFont
@@ -317,10 +384,7 @@ function dgsG2DLoadHooker()
 			row = isGUIGridList[gl] and row+1 or row
 			return dgsGridListSetItemText(gl,row,...)
 		end
-		guiGridListGetSelectedCount = function(gl,row,...)
-			row = isGUIGridList[gl] and row+1 or row
-			return dgsGridListGetSelectedCount(gl,row,...)
-		end
+		guiGridListGetSelectedCount = dgsGridListGetSelectedCount
 		guiGridListGetSelectedItem = function(gl)
 			if isGUIGridList[gl] then
 				local selected = dgsGridListGetSelectedItem(gl)
@@ -454,6 +518,7 @@ function dgsG2DLoadHooker()
 			onClientMouseWheel="onDgsMouseWheel",
 		}
 		_addEventHandler = addEventHandler
+		
 		addEventHandler = function(even,...)
 			_addEventHandler(eventReplace[even] or even,...)
 		end

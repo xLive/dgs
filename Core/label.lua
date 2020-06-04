@@ -1,3 +1,18 @@
+--Dx Functions
+local dxDrawLine = dxDrawLine
+local dxDrawImage = dxDrawImageExt
+local dxDrawImageSection = dxDrawImageSectionExt
+local dxDrawText = dxDrawText
+local dxGetFontHeight = dxGetFontHeight
+local dxDrawRectangle = dxDrawRectangle
+local dxSetShaderValue = dxSetShaderValue
+local dxGetPixelsSize = dxGetPixelsSize
+local dxGetPixelColor = dxGetPixelColor
+local dxSetRenderTarget = dxSetRenderTarget
+local dxGetTextWidth = dxGetTextWidth
+local dxSetBlendMode = dxSetBlendMode
+--
+
 function dgsCreateLabel(x,y,sx,sy,text,relative,parent,textColor,scalex,scaley,shadowoffsetx,shadowoffsety,shadowcolor,right,bottom)
 	assert(tonumber(x),"Bad argument @dgsCreateLabel at argument 1, expect number got "..type(x))
 	assert(tonumber(y),"Bad argument @dgsCreateLabel at argument 2, expect number got "..type(y))
@@ -14,17 +29,19 @@ function dgsCreateLabel(x,y,sx,sy,text,relative,parent,textColor,scalex,scaley,s
 	dgsAttachToTranslation(label,resourceTranslation[sourceResource or getThisResource()])
 	if type(text) == "table" then
 		dgsElementData[label]._translationText = text
-		text = dgsTranslate(label,text,sourceResource)
+		dgsSetData(label,"text",text)
+	else
+		dgsSetData(label,"text",tostring(text))
 	end
-	dgsSetData(label,"text",tostring(text))
 	local textSizeX,textSizeY = tonumber(scalex) or styleSettings.label.textSize[1], tonumber(scaley) or styleSettings.label.textSize[2]
 	dgsSetData(label,"textSize",{textSizeX,textSizeY})
 	dgsSetData(label,"clip",false)
 	dgsSetData(label,"wordbreak",false)
 	dgsSetData(label,"colorcoded",false)
+	dgsSetData(label,"subPixelPositioning",false)
 	dgsSetData(label,"shadow",{shadowoffsetx,shadowoffsety,shadowcolor})
 	dgsSetData(label,"alignment",{right or "left",bottom or "top"})
-	dgsSetData(label,"font",systemFont)
+	dgsSetData(label,"font",styleSettings.label.font or systemFont)
 	calculateGuiPositionSize(label,x,y,relative or false,sx,sy,relative or false,true)
 	triggerEvent("onDgsCreate",label,sourceResource)
 	return label
@@ -86,3 +103,60 @@ function dgsLabelGetFontHeight(label)
 	local textSizeY = dgsElementData[label].textSize[2]
 	return dxGetFontHeight(textSizeY,font)
 end
+
+----------------------------------------------------------------
+--------------------------Renderer------------------------------
+----------------------------------------------------------------
+dgsRenderer["dgs-dxlabel"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,parentAlpha,isPostGUI,rndtgt)
+	local alignment = eleData.alignment
+	local colors,imgs = eleData.textColor,eleData.image
+	colors = applyColorAlpha(colors,parentAlpha)
+	local colorimgid = 1
+	if MouseData.enter == source then
+		colorimgid = 2
+		if MouseData.clickl == source then
+			colorimgid = 3
+		end
+	end
+	local font = eleData.font or systemFont
+	local clip = eleData.clip
+	local wordbreak = eleData.wordbreak
+	local text = eleData.text
+	local txtSizX,txtSizY = eleData.textSize[1],eleData.textSize[2]
+	local colorcoded = eleData.colorcoded
+	local shadow = eleData.shadow
+	if shadow then
+		local shadowoffx,shadowoffy,shadowc,shadowIsOutline = shadow[1],shadow[2],shadow[3],shadow[4]
+		local textX,textY = x,y
+		if shadowoffx and shadowoffy and shadowc then
+			local shadowc = applyColorAlpha(shadowc,parentAlpha)
+			local shadowText = colorcoded and text:gsub('#%x%x%x%x%x%x','') or text
+			dxDrawText(shadowText,textX+shadowoffx,textY+shadowoffy,textX+w+shadowoffx,textY+h+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+			if shadowIsOutline then
+				dxDrawText(shadowText,textX-shadowoffx,textY+shadowoffy,textX+w-shadowoffx,textY+h+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+				dxDrawText(shadowText,textX-shadowoffx,textY-shadowoffy,textX+w-shadowoffx,textY+h-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+				dxDrawText(shadowText,textX+shadowoffx,textY-shadowoffy,textX+w+shadowoffx,textY+h-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+			end
+		end
+	end
+	dxDrawText(text,x,y,x+w,y+h,colors,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI,colorcoded,eleData.subPixelPositioning and true or false)
+	if enabled[1] and mx then
+		if mx >= cx and mx<= cx+w and my >= cy and my <= cy+h then
+			MouseData.hit = source
+		end
+	end
+	return rndtgt
+end
+----------------------------------------------------------------
+-------------------------OOP Class------------------------------
+----------------------------------------------------------------
+dgsOOP["dgs-dxlabel"] = [[
+	setColor = dgsOOP.genOOPFnc("dgsLabelSetColor",true),
+	getColor = dgsOOP.genOOPFnc("dgsLabelGetColor"),
+	setHorizontalAlign = dgsOOP.genOOPFnc("dgsLabelSetHorizontalAlign",true),
+	getHorizontalAlign = dgsOOP.genOOPFnc("dgsLabelGetHorizontalAlign"),
+	setVerticalAlign = dgsOOP.genOOPFnc("dgsLabelSetVerticalAlign",true),
+	getVerticalAlign = dgsOOP.genOOPFnc("dgsLabelGetVerticalAlign"),
+	getTextExtent = dgsOOP.genOOPFnc("dgsLabelGetTextExtent"),
+	getFontHeight = dgsOOP.genOOPFnc("dgsLabelGetFontHeight"),
+]]

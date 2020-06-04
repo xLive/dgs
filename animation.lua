@@ -1,3 +1,8 @@
+---------------Speed Up
+local assert = assert
+local type = type
+local triggerEvent = triggerEvent
+
 animGUIList = {}
 moveGUIList = {}
 sizeGUIList = {}
@@ -13,7 +18,13 @@ function dgsIsAniming(gui)
 	return animGUIList[gui] or false
 end
 
-function dgsAnimTo(gui, property, value, easing, thetime, callback,reverseProgress)
+function dgsAnimTo(gui,property,value,easing,thetime,callback,reverseProgress)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsAnimTo(gui[i],property,value,easing,thetime,callback,reverseProgress)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsAnimTo at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	local thetime = tonumber(thetime)
 	assert(type(property) == "string","Bad argument @dgsAnimTo at argument 2, expect string got "..type(property))
@@ -35,6 +46,12 @@ function dgsAnimTo(gui, property, value, easing, thetime, callback,reverseProgre
 end
 
 function dgsStopAniming(gui,property)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsStopAniming(gui,property)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsStopAniming at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	if animGUIList[gui] then
 		local animList = dgsElementData[gui].anim or {}
@@ -68,6 +85,12 @@ function dgsIsMoving(gui)
 end
 
 function dgsMoveTo(gui,x,y,relative,movetype,easing,torvx,vy,tab)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsMoveTo(gui[i],x,y,relative,movetype,easing,torvx,vy,tab)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsMoveTo at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	local x,y,torvx = tonumber(x),tonumber(y),tonumber(torvx)
 	assert(x,"Bad argument @dgsMoveTo at argument 2, expect number got "..type(x))
@@ -86,6 +109,12 @@ function dgsMoveTo(gui,x,y,relative,movetype,easing,torvx,vy,tab)
 end
 
 function dgsStopMoving(gui)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsStopMoving(gui)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsStopMoving at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	if moveGUIList[gui] then
 		dgsSetData(gui,"move",false)
@@ -102,6 +131,12 @@ function dgsIsSizing(gui)
 end
 
 function dgsSizeTo(gui,x,y,relative,movetype,easing,torvx,vy,tab)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsSizeTo(gui[i],x,y,relative,movetype,easing,torvx,vy,tab)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsSizeTo at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	local x,y,torvx = tonumber(x),tonumber(y),tonumber(torvx)
 	assert(x,"Bad argument @dgsSizeTo at argument 2, expect number got "..type(x))
@@ -120,6 +155,12 @@ function dgsSizeTo(gui,x,y,relative,movetype,easing,torvx,vy,tab)
 end
 
 function dgsStopSizing(gui)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsStopSizing(gui)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsStopSizing at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	if sizeGUIList[gui] then
 		dgsSetData(gui,"size",false)
@@ -136,6 +177,12 @@ function dgsIsAlphaing(gui)
 end
 
 function dgsAlphaTo(gui,toalpha,movetype,easing,torv,tab)
+	if type(gui) == "table" then
+		for i=1,#gui do
+			dgsAlphaTo(gui[i],toalpha,movetype,easing,torv,tab)
+		end
+		return true
+	end
 	assert(dgsIsDxElement(gui),"Bad argument @dgsAlphaTo at argument 1, expect dgs-dxgui got "..dgsGetType(gui))
 	local toalpha,torv = tonumber(toalpha),tonumber(torv)
 	assert(toalpha,"Bad argument @dgsAlphaTo at argument 2, expect number got "..type(toalpha))
@@ -176,7 +223,7 @@ addEventHandler("onClientRender",root,function()
 				local propertyName,targetValue,oldValue,easing,thetime,isReversed = data[1],data[2],data[3],data[4],data[5],data.reverseProgress
 				local changeTime = tickCount-data[0]
 				local ctPercent = changeTime/thetime
-				linearProgress = ctPercent >= 1 and 1 or ctPercent
+				local linearProgress = ctPercent >= 1 and 1 or ctPercent
 				linearProgress = isReversed and 1-linearProgress or linearProgress
 				if builtins[easing] then
 					local percent = oldValue+getEasingValue(linearProgress,easing)*(targetValue-oldValue)

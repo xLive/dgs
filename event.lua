@@ -1,7 +1,8 @@
 local cos,sin,rad,atan2,deg = math.cos,math.sin,math.rad,math.atan2,math.deg
 local gsub,sub,len,find,format,byte = string.gsub,string.sub,string.len,string.find,string.format,byte
 local setmetatable,ipairs,pairs = setmetatable,ipairs,pairs
-local insert = table.insert
+local tableInsert = table.insert
+local tableRemove = table.remove
 local _dxDrawImageSection = dxDrawImageSection
 local _dxDrawImage = dxDrawImage
 ClientInfo = {
@@ -10,57 +11,66 @@ ClientInfo = {
 dgs = exports[getResourceName(getThisResource())]
 
 ------Event for developers
-addEvent("onDgsMouseLeave")
-addEvent("onDgsMouseEnter")
-addEvent("onDgsMouseClick")
-addEvent("onDgsMouseWheel")
-addEvent("onDgsMouseClickUp")
-addEvent("onDgsMouseClickDown")
-addEvent("onDgsMouseDoubleClick")
-addEvent("onDgsWindowClose")
-addEvent("onDgsPositionChange")
-addEvent("onDgsSizeChange")
-addEvent("onDgsTextChange")
-addEvent("onDgsElementScroll")
-addEvent("onDgsDestroy")
-addEvent("onDgsSwitchButtonStateChange")
-addEvent("onDgsGridListSelect")
-addEvent("onDgsGridListHover")
-addEvent("onDgsGridListItemDoubleClick")
-addEvent("onDgsProgressBarChange")
-addEvent("onDgsCreate")
-addEvent("onDgsPluginCreate")
-addEvent("onDgsPreRender")
-addEvent("onDgsRender")
-addEvent("onDgsElementRender")
-addEvent("onDgsElementLeave")
-addEvent("onDgsElementEnter")
-addEvent("onDgsElementMove")
-addEvent("onDgsElementSize")
-addEvent("onDgsFocus")
-addEvent("onDgsBlur")
-addEvent("onDgsMouseMove")
-addEvent("onDgsTabSelect")
-addEvent("onDgsTabPanelTabSelect")
-addEvent("onDgsRadioButtonChange")
-addEvent("onDgsCheckBoxChange")
-addEvent("onDgsComboBoxSelect")
-addEvent("onDgsComboBoxStateChange")
-addEvent("onDgsEditPreSwitch")
-addEvent("onDgsEditSwitched")
-addEvent("onDgsEditAccepted")
-addEvent("onDgsStopMoving")
-addEvent("onDgsStopSizing")
-addEvent("onDgsStopAlphaing")
-addEvent("onDgsStopAniming")
-addEvent("onDgsArrowListValueChange")
-addEvent("onDgsMouseDrag")
-addEvent("onDgsStart")
--------internal events
-addEvent("DGSI_ReceiveIP",true)
-addEvent("DGSI_ReceiveQRCode",true)
+events = {
+	"onDgsMouseLeave",
+	"onDgsMouseEnter",
+	"onDgsMouseClick",
+	"onDgsMouseWheel",
+	"onDgsMouseClickUp",
+	"onDgsMouseClickDown",
+	"onDgsMouseDoubleClick",
+	"onDgsWindowClose",
+	"onDgsPositionChange",
+	"onDgsSizeChange",
+	"onDgsTextChange",
+	"onDgsElementScroll",
+	"onDgsDestroy",
+	"onDgsSwitchButtonStateChange",
+	"onDgsGridListSelect",
+	"onDgsGridListHover",
+	"onDgsGridListItemDoubleClick",
+	"onDgsProgressBarChange",
+	"onDgsCreate",
+	"onDgsPluginCreate",
+	"onDgsPreRender",
+	"onDgsRender",
+	"onDgsElementRender",
+	"onDgsElementLeave",
+	"onDgsElementEnter",
+	"onDgsElementMove",
+	"onDgsElementSize",
+	"onDgsFocus",
+	"onDgsBlur",
+	"onDgsMouseMove",
+	"onDgsTabSelect",
+	"onDgsTabPanelTabSelect",
+	"onDgsRadioButtonChange",
+	"onDgsCheckBoxChange",
+	"onDgsComboBoxSelect",
+	"onDgsComboBoxStateChange",
+	"onDgsEditPreSwitch",
+	"onDgsEditSwitched",
+	"onDgsEditAccepted",
+	"onDgsStopMoving",
+	"onDgsStopSizing",
+	"onDgsStopAlphaing",
+	"onDgsStopAniming",
+	"onDgsMouseDrag",
+	"onDgsStart",
+	-------Plugin events
+	"onDgsRemoteImageLoad",
+	"onDgsQRCodeLoad",
+	-------internal events
+	"DGSI_ReceiveIP",
+	"DGSI_SendAboutData",
+	"DGSI_ReceiveQRCode",
+	"DGSI_ReceiveRemoteImage",
+	-------
+}
+for i=1,#events do
+	addEvent(events[i],true)
+end
 
--------
 fontDxHave = {
 	["default"]=true,
 	["default-bold"]=true,
@@ -72,6 +82,27 @@ fontDxHave = {
 	["diploma"]=true,
 	["beckett"]=true,
 }
+
+function dgsGetSystemFont() return systemFont end
+function dgsSetSystemFont(font,size,bold,quality)
+	assert(type(font) == "string","Bad argument @dgsSetSystemFont at argument 1, expect a string got "..dgsGetType(font))
+	if isElement(systemFont) then
+		destroyElement(systemFont)
+	end
+	sourceResource = sourceResource or getThisResource()
+	if fontDxHave[font] then
+		systemFont = font
+		return true
+	elseif sourceResource then
+		local path = font:find(":") and font or ":"..getResourceName(sourceResource).."/"..font
+		assert(fileExists(path),"Bad argument @dgsSetSystemFont at argument 1,couldn't find such file '"..path.."'")
+		local font = dxCreateFont(path,size,bold,quality)
+		if isElement(font) then
+			systemFont = font
+		end
+	end
+	return false
+end
 
 builtins = {
 	Linear = true,
@@ -94,14 +125,25 @@ builtins = {
 	SineCurve = true,
 	CosineCurve = true,
 }
+-------DGS Built-in Texture
+DGSBuiltInTex = {
+	transParent_1x1 = dxCreateTexture(1,1,"dxt5"),
+}
+
 -------DEBUG
 addCommandHandler("debugdgs",function(command,arg)
 	if not arg then
 		debugMode = (not getElementData(localPlayer,"DGS-DEBUG")) and 1 or false
 		setElementData(localPlayer,"DGS-DEBUG",debugMode,false)
+		outputChatBox("[DGS]Debug Mode "..(debugMode and "#00FF00Enabled" or "#FF0000Disabled"),255,255,255,true)
 	elseif arg == "2" then
 		debugMode = 2
 		setElementData(localPlayer,"DGS-DEBUG",2,false)
+		outputChatBox("[DGS]Debug Mode "..(debugMode and "#00FF00Enabled ( Mode 2 )"),255,255,255,true)
+	elseif arg == "c" then
+		local comp = not getElementData(localPlayer,"DGS-DEBUG-C")
+		outputChatBox("[DGS]Debug Mode For Compatibility Check "..(comp and "#00FF00Enabled" or "#FF0000Disabled"),255,255,255,true)
+		setElementData(localPlayer,"DGS-DEBUG-C",comp,false)
 	end
 end)
 
@@ -122,6 +164,17 @@ function table.find(tab,ke,num)
 		end
 	end
 	return false
+end
+
+function table.removeItemFromArray(tab,item)
+	local id
+	for i=1,#tab do
+		if tab[i] == item then
+			id = i
+			break
+		end
+	end
+	return id and tableRemove(tab,id) or false
 end
 
 function table.count(tabl)
@@ -157,7 +210,7 @@ function table.complement(theall,...)
 	local newtable = {}
 	for k,v in pairs(theall) do
 		if not table.find(remove) then
-			table.insert(newtable,v)
+			tableInsert(newtable,v)
 		end
 	end
 	return newtable
@@ -178,6 +231,15 @@ function table.deepcopy(obj)
     end
     return Func(obj)
 end
+
+function table.shallowCopy(obj)
+	local InTable = {}
+	for k,v in pairs(obj) do
+		InTable[k] = v
+	end
+	return InTable
+end
+
 --------------------------------String Utility
 function string.split(s,delim)
 	local delimLen = len(delim)
@@ -193,7 +255,6 @@ function string.split(s,delim)
 	t[index] = sub(s,start)
 	return t
 end
-
 --------------------------------Math Utility
 function findRotation(x1,y1,x2,y2,offsetFix) 
 	local t = -deg(atan2(x2-x1,y2-y1))+offsetFix
@@ -211,10 +272,11 @@ function math.restrict(value,n_min,n_max)
 end
 
 function math.inRange(n_min,n_max,value)
-	if value >= n_min and value <= n_max then
-		return true
-	end
-	return false
+	return value >= n_min and value <= n_max
+end
+
+function math.lerp(s,a,b)
+	return a + s * (b - a)
 end
 
 function math.seekEmpty(list)
@@ -426,16 +488,47 @@ function HSL2HSV(H,S,L)
 end
 --------------------------------Dx Utility
 function dxDrawImageExt(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI)
-	local theType = dgsGetType(image)
-	if theType == "table" then
+	local dgsBasicType = dgsGetType(image)
+	if dgsBasicType == "table" then
 		return _dxDrawImageSection(posX,posY,width,height,image[2],image[3],image[4],image[5],image[1],rotation,rotationX,rotationY,color,postGUI)
-	elseif theType == "dgs-dxcustomrenderer" then
+	elseif dgsBasicType == "dgs-dxcustomrenderer" then
 		return dgsElementData[image].customRenderer(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI)
 	else
+		local pluginType = dgsGetPluginType(image)
+		if pluginType == "dgs-dxcanvas" then
+			dgsCanvasRender(image)
+		elseif pluginType == "dgs-dxblurbox" then
+			return _dxDrawImageSection(posX,posY,width,height,posX*blurboxFactor,posY*blurboxFactor,width*blurboxFactor,height*blurboxFactor,image,rotation,rotationX,rotationY,color,false)
+		end
 		return _dxDrawImage(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI)
 	end
 end
 
+function dxDrawImageSectionExt(posX,posY,width,height,u,v,usize,vsize,image,rotation,rotationX,rotationY,color,postGUI)
+	local dgsBasicType = dgsGetType(image)
+	if dgsBasicType == "dgs-dxcustomrenderer" then
+		return dgsElementData[image].customRenderer(posX,posY,width,height,image,rotation,rotationX,rotationY,color,postGUI)
+	else
+		if dgsGetPluginType(image) == "dgs-dxcanvas" then
+			dgsCanvasRender(image)
+		end
+		return _dxDrawImageSection(posX,posY,width,height,u,v,usize,vsize,image,rotation,rotationX,rotationY,color,postGUI)
+	end
+end
+
+_dxCreateRenderTarget = dxCreateRenderTarget
+function dxCreateRenderTarget(w,h,isTransparent,dgsElement)
+	local rt = _dxCreateRenderTarget(w,h,isTransparent)
+	if not isElement(rt) and w*h ~= 0 then
+		local videoMemory = dxGetStatus().VideoMemoryFreeForMTA
+		local reqSize,reqUnit = getProperUnit(0.0000076*w*h,"MB")
+		local freeSize,freeUnit = getProperUnit(videoMemory,"MB")
+		local forWhat = dgsElement and (" for "..dgsGetPluginType(dgsElement)) or ""
+		outputDebugString("Failed to create render target"..forWhat.." [Expected:"..reqSize..reqUnit.."/Free:"..freeSize..freeUnit.."]",2)
+		return false
+	end
+	return rt
+end
 --------------------------------Other Utility
 function urlEncode(s)
     s = gsub(s,"([^%w%.%- ])",function(c)
@@ -451,6 +544,34 @@ function urlDecode(s)
     return s
 end
 
+unitList = {
+	{"B",8,1024},	--Go down ratio, Go up ratio
+	{"KB",1024,1024},
+	{"MB",1024,1024},
+	{"GB",1024,1024},
+}
+
+function getProperUnit(value,unit)
+	local cUID = table.find(unitList,unit,1)
+	if not cUID then return value,unit end
+	local currentUnit = unitList[cUID]
+	while(true) do
+		if value < 1 then
+			if cUID <= 1 then return value,currentUnit[1] end
+			value = value * currentUnit[2]
+			cUID = cUID-1
+			currentUnit = unitList[cUID]
+		elseif value > currentUnit[3] then
+			if cUID >= #unitList then return value,currentUnit[1] end
+			value = value /currentUnit[3]
+			cUID = cUID+1
+			currentUnit = unitList[cUID]
+		else
+			return value,currentUnit[1]
+		end
+	end
+end
+--------------------------------Other Utility
 function dgsRunString(func,...)
 	local fnc = loadstring(func)
 	assert(type(fnc) == "function","[DGS]Can't Load Bad Function By dgsRunString")
@@ -465,6 +586,7 @@ keyStateMap = {
 	lalt=getKeyState("lalt"),
 	ralt=getKeyState("ralt"),
 }
+
 _getKeyState = getKeyState
 function getKeyState(key)
 	if keyStateMap[key] ~= nil then
@@ -479,23 +601,16 @@ addEventHandler("onClientKey",root,function(but,state)
 		keyStateMap[but] = state
 	end
 end)
-
---------------------------------OOP Utility
-
 --------------------------------Dx Utility
 PixelShaderCode = [[
-	float4 main(float2 Tex : TEXCOORD0):COLOR0
-	{
-		return 0;
+float4 main(float2 Tex : TEXCOORD0):COLOR0 {
+	return 0;
+}
+technique RepTexture {
+	pass P0 {
+		PixelShader = compile ps_&rep main();
 	}
-	
-	technique RepTexture
-	{
-		pass P0
-		{
-			PixelShader = compile ps_&rep main();
-		}
-	}
+}
 ]]
 PixShaderVersion = {"2_0","2_a","2_b","3_0"}
 function checkPixelShaderVersion()

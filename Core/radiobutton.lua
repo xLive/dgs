@@ -1,3 +1,17 @@
+--Dx Functions
+local dxDrawLine = dxDrawLine
+local dxDrawImage = dxDrawImageExt
+local dxDrawImageSection = dxDrawImageSectionExt
+local dxDrawText = dxDrawText
+local dxGetFontHeight = dxGetFontHeight
+local dxDrawRectangle = dxDrawRectangle
+local dxSetShaderValue = dxSetShaderValue
+local dxGetPixelsSize = dxGetPixelsSize
+local dxGetPixelColor = dxGetPixelColor
+local dxSetRenderTarget = dxSetRenderTarget
+local dxGetTextWidth = dxGetTextWidth
+local dxSetBlendMode = dxSetBlendMode
+--
 function dgsCreateRadioButton(x,y,sx,sy,text,relative,parent,textColor,scalex,scaley,norimg_f,hovimg_f,cliimg_f,norcolor_f,hovcolor_f,clicolor_f,norimg_t,hovimg_t,cliimg_t,norcolor_t,hovcolor_t,clicolor_t)
 	assert(tonumber(x),"Bad argument @dgsCreateRadioButton at argument 1, expect number got "..type(x))
 	assert(tonumber(y),"Bad argument @dgsCreateRadioButton at argument 2, expect number got "..type(y))
@@ -43,10 +57,10 @@ function dgsCreateRadioButton(x,y,sx,sy,text,relative,parent,textColor,scalex,sc
 	dgsSetData(rb,"textColor",textColor or styleSettings.radiobutton.textColor)
 	local textSizeX,textSizeY = tonumber(scalex) or styleSettings.radiobutton.textSize[1], tonumber(scaley) or styleSettings.radiobutton.textSize[2]
 	dgsSetData(rb,"textSize",{textSizeX,textSizeY})
-	dgsSetData(rb,"textImageSpace",styleSettings.radiobutton.textImageSpace)
+	dgsSetData(rb,"textPadding",styleSettings.radiobutton.textPadding)
 	dgsSetData(rb,"buttonSize",styleSettings.radiobutton.buttonSize)
 	dgsSetData(rb,"shadow",{_,_,_})
-	dgsSetData(rb,"font",systemFont)
+	dgsSetData(rb,"font",styleSettings.radiobutton.font or systemFont)
 	dgsSetData(rb,"clip",false)
 	dgsSetData(rb,"wordbreak",false)
 	dgsSetData(rb,"colorcoded",false)
@@ -110,3 +124,107 @@ function dgsRadioButtonGetVerticalAlign(radiobutton)
 	local alignment = dgsElementData[radiobutton].alignment
 	return alignment[2]
 end
+
+----------------------------------------------------------------
+--------------------------Renderer------------------------------
+----------------------------------------------------------------
+dgsRenderer["dgs-dxradiobutton"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,parentAlpha,isPostGUI,rndtgt)
+	local image_f,image_t = eleData.image_f,eleData.image_t
+	local color_f,color_t = eleData.color_f,eleData.color_t
+	local rbParent = eleData.rbParent
+	local image,color
+	local _buttonSize = eleData.buttonSize
+	local buttonSizeX,buttonSizeY
+	if tonumber(_buttonSize[2]) then
+		buttonSizeX = _buttonSize[3] and _buttonSize[1]*w or _buttonSize[1]
+		buttonSizeY = _buttonSize[3] and _buttonSize[2]*h or _buttonSize[2]
+	else
+		buttonSizeX = _buttonSize[2] and _buttonSize[1]*h or _buttonSize[1]
+		buttonSizeY = buttonSizeX
+	end
+	if dgsElementData[rbParent].RadioButton == source then
+		image,color = image_t,color_t
+	else
+		image,color = image_f,color_f
+	end
+	local colorimgid = 1
+	if MouseData.enter == source then
+		colorimgid = 2
+		if eleData.clickType == 1 then
+			if MouseData.clickl == source then
+				colorimgid = 3
+			end
+		elseif eleData.clickType == 2 then
+			if MouseData.clickr == source then
+				colorimgid = 3
+			end
+		else
+			if MouseData.clickl == source or MouseData.clickr == source then
+				colorimgid = 3
+			end
+		end
+	end
+	local finalcolor
+	if not enabled[1] and not enabled[2] then
+		if type(eleData.disabledColor) == "number" then
+			finalcolor = applyColorAlpha(eleData.disabledColor,parentAlpha)
+		elseif eleData.disabledColor == true then
+			local r,g,b,a = fromcolor(color[1],true)
+			local average = (r+g+b)/3*eleData.disabledColorPercent
+			finalcolor = tocolor(average,average,average,a*parentAlpha)
+		else
+			finalcolor = color[colorimgid]
+		end
+	else
+		finalcolor = applyColorAlpha(color[colorimgid],parentAlpha)
+	end
+	if image[colorimgid] then
+		dxDrawImage(x,y+h*0.5-buttonSizeY*0.5,buttonSizeX,buttonSizeY,image[colorimgid],0,0,0,finalcolor,isPostGUI)
+	else
+		dxDrawRectangle(x,y+h*0.5-buttonSizeY*0.5,buttonSizeX,buttonSizeY,finalcolor,isPostGUI)
+	end
+	local font = eleData.font or systemFont
+	local txtSizX,txtSizY = eleData.textSize[1],eleData.textSize[2] or eleData.textSize[1]
+	local clip = eleData.clip
+	local wordbreak = eleData.wordbreak
+	local _textPadding = eleData.textPadding
+	local text = eleData.text
+	local textPadding = _textPadding[2] and _textPadding[1]*w or _textPadding[1]
+	local colorcoded = eleData.colorcoded
+	local alignment = eleData.alignment
+	local px = x+buttonSizeX+textPadding
+	if eleData.PixelInt then px = px-px%1 end
+	local shadow = eleData.shadow
+	if shadow then
+		local shadowoffx,shadowoffy,shadowc,shadowIsOutline = shadow[1],shadow[2],shadow[3],shadow[4]
+		local textX,textY = px,y
+		if shadowoffx and shadowoffy and shadowc then
+			shadowc = applyColorAlpha(shadowc,parentAlpha)
+			local shadowText = colorcoded and text:gsub('#%x%x%x%x%x%x','') or text
+			dxDrawText(shadowText,textX+shadowoffx,textY+shadowoffy,textX+w+shadowoffx,textY+h+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+			if shadowIsOutline then
+				dxDrawText(shadowText,textX-shadowoffx,textY+shadowoffy,textX+w-shadowoffx,textY+h+shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+				dxDrawText(shadowText,textX-shadowoffx,textY-shadowoffy,textX+w-shadowoffx,textY+h-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+				dxDrawText(shadowText,textX+shadowoffx,textY-shadowoffy,textX+w+shadowoffx,textY+h-shadowoffy,shadowc,txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI)
+			end
+		end
+	end
+	dxDrawText(eleData.text,px,y,px+w-1,y+h-1,applyColorAlpha(eleData.textColor,parentAlpha),txtSizX,txtSizY,font,alignment[1],alignment[2],clip,wordbreak,isPostGUI,colorcoded)
+	if enabled[1] and mx then
+		if mx >= cx and mx<= cx+w and my >= cy and my <= cy+h then
+			MouseData.hit = source
+		end
+	end
+	return rndtgt
+end
+----------------------------------------------------------------
+-------------------------OOP Class------------------------------
+----------------------------------------------------------------
+dgsOOP["dgs-dxradiobutton"] = [[
+	getSelected = dgsOOP.genOOPFnc("dgsRadioButtonGetSelected"),
+	setSelected = dgsOOP.genOOPFnc("dgsRadioButtonSetSelected",true),
+	getHorizontalAlign = dgsOOP.genOOPFnc("dgsRadioButtonGetHorizontalAlign"),
+	setHorizontalAlign = dgsOOP.genOOPFnc("dgsRadioButtonSetHorizontalAlign",true),
+	getVerticalAlign = dgsOOP.genOOPFnc("dgsRadioButtonGetVerticalAlign"),
+	setVerticalAlign = dgsOOP.genOOPFnc("dgsRadioButtonSetVerticalAlign",true),
+]]

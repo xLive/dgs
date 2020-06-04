@@ -230,6 +230,7 @@ function dgsBindToColorPicker(show,colorPicker,colorType,colorAttribute,staticMo
 	local targetType = dgsGetType(show)
 	local targetPlugin = dgsGetPluginType(show)
 	dgsSetData(show,"bindColorPicker",colorPicker)
+	dgsSetData(show,"isReversed",isReversed)
 	if targetPlugin == "dgs-dxcomponentselector" then
 		local shader = dgsElementData[show].shader
 		if isElement(shader) then destroyElement(shader) return end
@@ -289,6 +290,7 @@ function dgsBindToColorPicker(show,colorPicker,colorType,colorAttribute,staticMo
 			if not setCool then
 				local cp = _DGSColorPicker
 				local show = _DGSShowElement
+				if not isElement(cp) then return dgsUnbindFromColorPicker(show) end
 				local colorType = _colorType
 				local colorAttribute = _colorAttribute
 				if colorAttribute == "A" then
@@ -317,6 +319,7 @@ function dgsBindToColorPicker(show,colorPicker,colorType,colorAttribute,staticMo
 			if setCool then return end
 			local cp = _DGSColorPicker
 			local show = _DGSShowElement
+			if not isElement(cp) then return dgsUnbindFromColorPicker(show) end
 			local colorType = _colorType
 			local colorAttribute = _colorAttribute
 			local value = dgsColorPickerGetComponentSelectorValue(show)/100
@@ -487,7 +490,6 @@ function dgsBindToColorPicker(show,colorPicker,colorType,colorAttribute,staticMo
 	else	
 		assert(false,"Bad argument at argument 1, unsupported type "..targetType)
 	end
-	dgsSetData(show,"isReversed",isReversed)
 	return true
 end
 
@@ -497,7 +499,9 @@ function dgsUnbindFromColorPicker(show)
 	if bound then
 		local tempColorChange = dgsElementData[show].bindColorPicker_Fnc1
 		local tempTextChange = dgsElementData[show].bindColorPicker_Fnc2
-		removeEventHandler("onDgsColorPickerChange",colorPicker,tempColorChange)
+		if isElement(bound) then
+			removeEventHandler("onDgsColorPickerChange",bound,tempColorChange)
+		end
 		removeEventHandler("onDgsTextChange",show,tempTextChange)
 		dgsElementData[show].bindColorPicker = nil
 		dgsElementData[show].bindColorPicker_Fnc1 = nil

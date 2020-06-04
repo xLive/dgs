@@ -2,6 +2,8 @@ styleSettings = {}
 styleManager = {}
 styleManager.customStyle = "Default"
 styleManager.sharedTexture = {}
+styleManager.createdTexture = {}
+styleManager.createdShader = {}
 styleManager.styles = {Default="Default"}
 styleManager.styleHistory = {"Default"}
 
@@ -39,25 +41,44 @@ function getAvailableFilePath(path)
 	end
 end
 
+function newTexture(texture,...)
+	if not isElement(texture) then
+		texture = dxCreateTexture(texture,...)
+	end
+	styleManager.createdTexture[texture] = true
+	return texture
+end
+
+function newShader(shader,...)
+	if not isElement(shader) then
+		shader = dxCreateShader(shader,...)
+	end
+	styleManager.createdShader[shader] = true
+	return shader
+end
+
 function dgsCreateTextureFromStyle(theTable)
 	if theTable then
 		local filePath,textureType,shaderSettings = theTable[1],theTable[2],theTable[3]
 		if filePath then
 			textureType = textureType or "image"
-			local thePath = getAvailableFilePath(filePath)
+			local thePath = filePath
+			if not isElement(filePath) then
+				thePath = getAvailableFilePath(filePath)
+			end
 			if textureType == "image" then
 				if styleSettings.sharedTexture then
 					if isElement(styleManager.sharedTexture[thePath]) then
 						return styleManager.sharedTexture[thePath]
 					else
-						styleManager.sharedTexture[thePath] = dxCreateTexture(thePath)
+						styleManager.sharedTexture[thePath] = newTexture(thePath)
 						return styleManager.sharedTexture[thePath]
 					end
 				else
-					return dxCreateTexture(thePath)
+					return newTexture(thePath)
 				end
 			elseif textureType == "shader" then
-				local shader = dxCreateShader(thePath)
+				local shader = newShader(thePath)
 				for k,v in pairs(shaderSettings or {}) do
 					dxSetShaderValue(shader,k,v)
 				end
@@ -93,6 +114,22 @@ function checkStyle(styleName)
 	end
 end
 
+function loadStyleFont(newFont,path)
+	local fontSize = 12
+	local fontBold = false
+	local fontQuality = "proof"
+	if type(newFont) == "table" then
+		fontSize = newFont[2] or fontSize
+		fontBold = newFont[3] or fontBold
+		fontQuality = newFont[4] or fontQuality
+		newFont = newFont[1]
+	end
+	if not fontDxHave[newFont] then
+		newFont = path..newFont
+	end
+	dgsSetSystemFont(newFont,fontSize,fontBold,fontQuality)
+end
+
 function dgsSetCurrentStyle(styleName)
 	local styleName = styleName or "Default"
 	local id = table.find(styleManager.styleHistory,styleName)
@@ -112,52 +149,46 @@ function dgsSetCurrentStyle(styleName)
 	local customStyleSettings = fnc()
 	if not next(styleSettings) then
 		styleSettings = customStyleSettings
+		loadStyleFont(styleSettings.systemFont,path)
 		return
 	else
-		for dgsType,settings in pairs(styleSettings) do
+		for dgsType,settings in pairs(customStyleSettings) do
 			if customStyleSettings[dgsType] then
-				if type(settings) == "table" then
+				if dgsType == "systemFont" then
+					loadStyleFont(customStyleSettings.systemFont,path)
+				elseif type(settings) == "table" then
 					for dgsProperty,value in pairs(settings) do
 						if customStyleSettings[dgsType][dgsProperty] ~= nil then
+							styleSettings[dgsType] = styleSettings[dgsType] or {}
 							styleSettings[dgsType][dgsProperty] = customStyleSettings[dgsType][dgsProperty]
 						end
 					end
-				else
-					if dgsType == "systemFont" then
-						local newFont = customStyleSettings[dgsType]
-						local fontSize = 12
-						local fontBold = false
-						local fontQuality = "proof"
-						if type(newFont) == "table" then
-							fontSize = newFont[2] or fontSize
-							fontBold = newFont[3] or fontBold
-							fontQuality = newFont[4] or fontQuality
-							newFont = newFont[1]
-						end
-						if not fontDxHave[newFont] then
-							newFont = path..newFont
-						end
-						dgsSetSystemFont(newFont,fontSize,fontBold,fontQuality)
-					elseif customStyleSettings[dgsType] ~= nil then
-						styleSettings[dgsType] = customStyleSettings[dgsType]
-					end
+				elseif customStyleSettings[dgsType] ~= nil then
+					styleSettings[dgsType] = customStyleSettings[dgsType]
 				end
 			end
 		end
 	end
 end
 
-function dgsGetCurrentStyle()
-	return styleManager.styleHistory[1] or "Default"
-end
-
-function dgsGetLoadedStyleList()
-	return styleManager.styles
-end
+function dgsGetCurrentStyle() return styleManager.styleHistory[1] or "Default" end
+function dgsGetLoadedStyleList() return styleManager.styles end
 
 function dgsIsStyleAvailable(styleName)
 	assert(type(styleName) == "string","Bad argument @dgsSetCurrentStyle at argument 1, expect a string got "..type(styleName))
 	return styleManager.styles[styleName]
+end
+
+function dgsStyleClear()
+	for k,v in pairs(styleManager.createdTexture) do
+		if isElement(v) then destroyElement(v) end
+	end
+	for k,v in pairs(styleManager.createdShader) do
+		if isElement(v) then destroyElement(v) end
+	end
+	for k,v in pairs(styleManager.sharedTexture) do
+		if isElement(v) then destroyElement(v) end
+	end
 end
 
 scanCustomStyle()
@@ -167,3 +198,5 @@ function loadStyleConfig()
 		dgsSetCurrentStyle(styleManager.customStyle)
 	end
 end
+
+loadStyleConfig()

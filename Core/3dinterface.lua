@@ -15,15 +15,11 @@ function LookRotation(x,y,z,rot)
 	return rz,ry,rz
 end
 
-depthBuffer = dxCreateShader("shaders/textureRelight.fx")
-function dgsSetDepthBufferShader(shader,x,y,z,fx,fy,fz,rotation,w,h,tex)
+function dgsSetFilterShaderData(shader,x,y,z,fx,fy,fz,rotation,w,h,tex,r,g,b,a)
 	local rx,ry,rz = LookRotation(fx,fy,fz,rotation)
-	dxSetShaderValue(shader, "sElementRotation", rad(rx), rad(ry), rad(rz))
-	dxSetShaderValue(shader, "sElementPosition", x, y, z )
-	dxSetShaderValue(shader, "sElementSize", w, h )
+	dxSetShaderValue(shader, "sElementColor",r/255,g/255,b/255,a/255)
 	dxSetShaderValue(shader, "sTexColor", tex )
 end
-
 
 function dgsCreate3DInterface(x,y,z,w,h,resolX,resolY,color,faceX,faceY,faceZ,distance,rot)
 	assert(tonumber(x),"Bad argument @dgsCreate3DInterface at argument 1, expect a number got "..type(x))
@@ -51,11 +47,8 @@ function dgsCreate3DInterface(x,y,z,w,h,resolX,resolY,color,faceX,faceY,faceZ,di
 	dgsSetData(interface,"dimension",-1)
 	dgsSetData(interface,"interior",-1)
 	dgsSetData(interface,"rotation",rot or 0)
-	local renderTarget = dxCreateRenderTarget(resolX,resolY,true)
-	if not isElement(renderTarget) then
-		local videoMemory = dxGetStatus().VideoMemoryFreeForMTA
-		outputDebugString("Failed to create render target for dgs-dx3dinterface [Expected:"..(0.0000076*resolX*resolY).."MB/Free:"..videoMemory.."MB]",2)
-	end
+	local renderTarget = dxCreateRenderTarget(resolX,resolY,true,interface)
+	dgsAttachToAutoDestroy(renderTarget,interface,1)
 	dgsSetData(interface,"renderTarget_parent",renderTarget)
 	triggerEvent("onDgsCreate",interface,sourceResource)
 	if not isElement(renderTarget) then
@@ -63,16 +56,6 @@ function dgsCreate3DInterface(x,y,z,w,h,resolX,resolY,color,faceX,faceY,faceZ,di
 		return false
 	end
 	return interface
-end
-
-function dgsDrawMaterialLine3D(x,y,z,vx,vy,vz,material,w,h,color,rot)
-	local offFaceX = atan2(vz,(vx^2+vy^2)^0.5)
-	local offFaceZ = atan2(vx,vy)
-	local _h=h
-	h=h*0.5
-	local _x,_y,_z = sin(offFaceX)*sin(offFaceZ)*cos(rot)+sin(rot)*cos(offFaceZ),sin(offFaceX)*cos(offFaceZ)*cos(rot)-sin(rot)*sin(offFaceZ),-cos(offFaceX)*cos(rot)
-	local x1,y1,z1 = _x*h,_y*h,_z*h
-	dxDrawMaterialLine3D(x-x1,y-y1,z-z1,x+x1,y+y1,z+z1,material,w,color,x+vx,y+vy,z+vz)
 end
 
 function dgsDrawMaterialLine3D(x,y,z,vx,vy,vz,material,w,h,color,rot)
@@ -86,10 +69,10 @@ function dgsDrawMaterialLine3D(x,y,z,vx,vy,vz,material,w,h,color,rot)
 	local leftX,leftY,leftZ = leftX/leftModel*w,leftY/leftModel*w,leftZ/leftModel*w
 	local r,g,b = fromcolor(color)
 	color = tocolor(r,g,b)
-	local leftTop = {leftX+topX+x,leftY+topY+y,leftZ-topZ+z,color,0,0}
-	local leftBottom = {leftX-topX+x,leftY-topY+y,leftZ+topZ+z,color,0,1}
-	local rightTop = {-leftX+topX+x,-leftY+topY+y,-leftZ-topZ+z,color,1,0}
-	local rightBottom = {-leftX-topX+x,-leftY-topY+y,-leftZ+topZ+z,color,1,1}
+	local rightBottom = {leftX+topX+x,leftY+topY+y,leftZ+topZ+z,color,0,1}
+	local rightTop = {leftX-topX+x,leftY-topY+y,leftZ-topZ+z,color,0,0}
+	local leftBottom = {-leftX+topX+x,-leftY+topY+y,-leftZ+topZ+z,color,1,1}
+	local leftTop= {-leftX-topX+x,-leftY-topY+y,-leftZ-topZ+z,color,1,0}
 	dxDrawMaterialPrimitive3D("trianglestrip",material,false,leftTop,leftBottom,rightTop,rightBottom)
 end
 
@@ -168,7 +151,7 @@ function dgs3DInterfaceSetBlendMode(interface,blend)
 	assert(dgsGetType(interface) == "dgs-dx3dinterface","Bad argument @dgs3DInterfaceSetBlendMode at argument 1, expect a dgs-dx3dinterface got "..dgsGetType(interface))
 	assert(type(blend) == "string","Bad argument @dgs3DInterfaceSetBlendMode at argument 2, expect a string got "..dgsGetType(blend))
 	assert(blendMode[blend],"Bad argument @dgs3DInterfaceSetBlendMode at argument 2, couldn't find such blend mode "..blend)
-	return dgsSetData(interface,"blendMode",blendMode)
+	return dgsSetData(interface,"blendMode",blend)
 end
 
 function dgs3DInterfaceGetBlendMode(interface)
@@ -231,7 +214,8 @@ function dgs3DInterfaceSetResolution(interface,w,h)
 	assert(dgsGetType(interface) == "dgs-dx3dinterface","Bad argument @dgs3DInterfaceSetResolution at argument 1, expect a dgs-dx3dinterface got "..dgsGetType(interface))
 	assert(tonumber(w),"Bad argument @dgs3DInterfaceSetResolution at argument 2, expect a number got "..type(w))
 	assert(tonumber(h),"Bad argument @dgs3DInterfaceSetResolution at argument 3, expect a number got "..type(h))
-	local renderTarget = dxCreateRenderTarget(w,h,true)
+	local renderTarget = dxCreateRenderTarget(w,h,true,interface)
+	dgsAttachToAutoDestroy(renderTarget,interface,1)
 	assert(renderTarget,"Bad argument @dgs3DInterfaceSetResolution, Failed to create render target for dgs 3d interface")
 	dgsSetData(interface,"renderTarget_parent",renderTarget)
 	return dgsSetData(interface,"resolution",{w,h})
@@ -284,3 +268,136 @@ function dgs3DInterfaceGetAttachedOffsets(interface)
 	end
 	return false
 end
+
+----------------------------------------------------------------
+--------------------------Renderer------------------------------
+----------------------------------------------------------------
+dgsRenderer["dgs-dx3dinterface"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,parentAlpha,isPostGUI,rndtgt)
+	local pos = eleData.position
+	local size = eleData.size
+	local faceTo = eleData.faceTo
+	local x,y,z,w,h,fx,fy,fz,rot = pos[1],pos[2],pos[3],size[1],size[2],faceTo[1],faceTo[2],faceTo[3],eleData.rotation
+	rndtgt = eleData.renderTarget_parent
+	if x and y and z and w and h and enabled[1] and mx then
+		local lnVec,lnPnt
+		local camX,camY,camZ = getCameraMatrix()
+		if not fx or not fy or not fz then
+			fx,fy,fz = camX-x,camY-y,camZ-z
+		end
+		if eleData.faceRelativeTo == "world" then
+			fx,fy,fz = fx-x,fy-y,fz-z
+		end
+		if wX and wY and wZ then
+			lnVec = {wX-camX,wY-camY,wZ-camZ}
+			lnPnt = {camX,camY,camZ}
+		end
+		if eleData.cameraDistance or 0 <= eleData.maxDistance then
+			eleData.hit = {dgsCalculate3DInterfaceMouse(x,y,z,fx,fy,fz,w,h,lnVec,lnPnt,rot)}
+		else
+			eleData.hit = {}
+		end
+		local hitData = eleData.hit or {}
+		if #hitData > 0 then
+			local hit,hitX,hitY,hx,hy,hz = hitData[1],hitData[2],hitData[3],hitData[4],hitData[5],hitData[6]
+			local distance = ((camX-hx)^2+(camY-hy)^2+(camZ-hz)^2)^0.5
+			local oldPos = MouseData.interfaceHit
+			if isElement(MouseData.lock3DInterface) then
+				if MouseData.lock3DInterface == source then
+					MouseData.hit = source
+					mx,my = hitX*eleData.resolution[1],hitY*eleData.resolution[2]
+					MouseX,MouseY = mx,my
+					MouseData.interfaceHit = {hx,hy,hz,distance,source}
+				end
+			elseif (not oldPos[4] or distance <= oldPos[4]) and hit then
+				MouseData.hit = source
+				mx,my = hitX*eleData.resolution[1],hitY*eleData.resolution[2]
+				MouseX,MouseY = mx,my
+				MouseData.interfaceHit = {hx,hy,hz,distance,source}
+			end
+		end
+		dxSetRenderTarget(rndtgt,true)
+		dxSetRenderTarget()
+		return rndtgt,false,mx,my
+	end
+	return rndtgt,true
+end
+
+function interfaceRender()
+	for i=1,#dx3DInterfaceTable do
+		local v = dx3DInterfaceTable[i]
+		local eleData = dgsElementData[v]
+		local dimension = eleData.dimension
+		if eleData.visible then
+			local attachTable = eleData.attachTo
+			if attachTable then
+				local element,offX,offY,offZ,offFaceX,offFaceY,offFaceZ = attachTable[1],attachTable[2],attachTable[3],attachTable[4],attachTable[5],attachTable[6],attachTable[7]
+				if not isElement(element) then
+					eleData.attachTo = false
+				else
+					local ex,ey,ez = getElementPosition(element)
+					local tmpX,tmpY,tmpZ = getPositionFromElementOffset(element,offFaceX,offFaceY,offFaceZ)
+					eleData.position = {getPositionFromElementOffset(element,offX,offY,offZ)}
+					eleData.faceTo = {tmpX-ex,tmpY-ey,tmpZ-ez}
+				end
+			end
+			local pos = eleData.position
+			local size = eleData.size
+			local faceTo = eleData.faceTo or {}
+			local x,y,z,w,h,fx,fy,fz,rot = pos[1],pos[2],pos[3],size[1],size[2],faceTo[1],faceTo[2],faceTo[3],eleData.rotation
+			eleData.hit = false
+			if x and y and z and w and h then
+				self = v
+				local camX,camY,camZ = getCameraMatrix()
+				local cameraDistance = ((camX-x)^2+(camY-y)^2+(camZ-z)^2)^0.5
+				eleData.cameraDistance = cameraDistance
+				if cameraDistance <= eleData.maxDistance then
+					local renderThing = eleData.renderTarget_parent
+					local addalp = 1
+					if cameraDistance >= eleData.fadeDistance then
+						addalp = 1-(cameraDistance-eleData.fadeDistance)/(eleData.maxDistance-eleData.fadeDistance)
+					end
+					local colors = applyColorAlpha(eleData.color,eleData.alpha*addalp)
+					if not fx or not fy or not fz then
+						fx,fy,fz = camX-x,camY-y,camZ-z
+					end
+					if eleData.faceRelativeTo == "world" then
+						fx,fy,fz = fx-x,fy-y,fz-z
+					end
+					local filter = eleData.filterShader
+					if isElement(filter) then
+						dgsSetFilterShaderData(filter,x,y,z,fx,fy,fz,rot,w,h,renderThing,fromcolor(colors))
+						renderThing = filter
+						colors = white
+					end
+					dgsDrawMaterialLine3D(x,y,z,fx,fy,fz,renderThing,w,h,colors,rot)
+				end
+			end
+		end
+	end
+end
+addEventHandler("onClientPreRender",root,interfaceRender)
+
+----------------------------------------------------------------
+-------------------------OOP Class------------------------------
+----------------------------------------------------------------
+dgsOOP["dgs-dx3dinterface"] = [[
+	getBlendMode = dgsOOP.genOOPFnc("dgs3DInterfaceGetBlendMode"),
+	setBlendMode = dgsOOP.genOOPFnc("dgs3DInterfaceSetBlendMode",true),
+	getPosition = dgsOOP.genOOPFnc("dgs3DInterfaceGetPosition"),
+	setPosition = dgsOOP.genOOPFnc("dgs3DInterfaceSetPosition",true),
+	getSize = dgsOOP.genOOPFnc("dgs3DInterfaceGetSize"),
+	setSize = dgsOOP.genOOPFnc("dgs3DInterfaceSetSize",true),
+	getResolution = dgsOOP.genOOPFnc("dgs3DInterfaceGetResolution"),
+	setResolution = dgsOOP.genOOPFnc("dgs3DInterfaceSetResolution",true),
+	attachToElement = dgsOOP.genOOPFnc("dgs3DInterfaceAttachToElement",true),
+	isAttached = dgsOOP.genOOPFnc("dgs3DInterfaceIsAttached",true),
+	getResolution = dgsOOP.genOOPFnc("dgs3DInterfaceGetResolution"),
+	setResolution = dgsOOP.genOOPFnc("dgs3DInterfaceSetResolution",true),
+	detachFromElement = dgsOOP.genOOPFnc("dgs3DInterfaceDetachFromElement",true),
+	setAttachedOffsets = dgsOOP.genOOPFnc("dgs3DInterfaceSetAttachedOffsets",true),
+	getAttachedOffsets = dgsOOP.genOOPFnc("dgs3DInterfaceGetAttachedOffsets"),
+	setRotation = dgsOOP.genOOPFnc("dgs3DInterfaceSetRotation",true),
+	getRotation = dgsOOP.genOOPFnc("dgs3DInterfaceGetRotation"),
+	setFaceTo = dgsOOP.genOOPFnc("dgs3DInterfaceSetFaceTo",true),
+	getFaceTo = dgsOOP.genOOPFnc("dgs3DInterfaceGetFaceTo"),
+]]

@@ -7,25 +7,83 @@ end)
 cmdSystem = {}
 netSystem = {}
 dxStatus = {}
-addCommandHandler("cmd",function()
+performanceBrowser = {}
+pBCat = {
+	["Lua memory"] = {
+		"name",
+		"change",
+		"current",
+		"max",
+		"XMLFiles",
+		"refs",
+		"Timers",
+		"Elements",
+		"TextItems",
+		"DxFonts",
+		"GuiFonts",
+		"Textures",
+		"Shaders",
+		"RenderTargets",
+		"ScreenSources",
+		"WebBrowsers",
+	},
+	["Lib memory"] = {
+		"name",
+		"change",
+		"current",
+		"max",
+	},
+	["Lua timing"] = {
+		"name",
+		"5s.cpu",
+		"5s.time",
+		"5s.calls",
+		"5s.avg",
+		"5s.max",
+		"60s.cpu",
+		"60s.time",
+		"60s.calls",
+		"60s.avg",
+		"60s.max",
+		"300s.cpu",
+		"300s.time",
+		"300s.calls",
+		"300s.avg",
+		"300s.max",
+	},
+	["Packet usage"] = {
+		"Packet type",
+		"Incoming.msgs/sec",
+		"Incoming.bytes/sec",
+		"Incoming.logic cpu",
+		"Outgoing.msgs/sec",
+		"Outgoing.bytes/sec",
+		"Outgoing.msgs",
+	},
+}
+function dgsBuildInCMD(command)
 	guiSetInputMode("no_binds_when_editing")
 	if not isElement(cmdSystem["window"]) then
 		cmdSystem["window"] = dgsCreateWindow(sW*0.5-20,sH*0.5,40,25,"CMD",false,tocolor(255,0,0,255),_,_,tocolor(80,140,200,255))
 		dgsWindowSetSizable(cmdSystem["window"],false)
+		dgsSetProperty(cmdSystem["window"],"textSize",{1.5,1.5})
 		dgsSetProperty(cmdSystem["window"],"outline",{"out",1,tocolor(100,100,100,255)})
 		dgsMoveTo(cmdSystem["window"],sW*0.25,sH*0.5,false,false,"OutQuad",300)
 		dgsSizeTo(cmdSystem["window"],sW*0.5,25,false,false,"OutQuad",300)
-		setTimer(function()
+		setTimer(function(command)
 			dgsMoveTo(cmdSystem["window"],sW*0.25,sH*0.25,false,false,"InQuad",300)
 			dgsSizeTo(cmdSystem["window"],sW*0.5,sH*0.6,false,false,"InQuad",300)
-			setTimer(function()
+			setTimer(function(command)
 				cmdSystem["cmd"] = dgsCreateCmd(0,0,sW*0.5,sH*0.6-45,false,cmdSystem["window"],1,1)
 				dgsCmdAddEventToWhiteList(cmdSystem["cmd"],{"changeMode"})
 				local version = getElementData(resourceRoot,"Version") or "N/A"
 				outputCmdMessage(cmdSystem["cmd"],"( Thisdp's Dx Graphical User Interface System ) Version: "..version)
-			end,310,1)
+				if command == "cmd" then
+					outputCmdMessage(cmdSystem["cmd"],"[Warnning]Command 'cmd' is deprecated, use 'dgscmd' instead")
+				end
+			end,310,1,command)
 			dgsShowCursor(true,"cmd")
-		end,310,1)
+		end,310,1,command)
 	else
 		for k,v in pairs(cmdSystem) do
 			if k ~= "window" then
@@ -41,7 +99,9 @@ addCommandHandler("cmd",function()
 			destroyElement(cmdSystem["window"])
 		end,500,1)
 	end
-end)
+end
+addCommandHandler("cmd",dgsBuildInCMD)
+addCommandHandler("dgscmd",dgsBuildInCMD)
 
 addEventHandler("onDgsWindowClose",root,function()
 	if source == cmdSystem["window"] then
@@ -114,7 +174,7 @@ end)
 
 dgsCmdAddCommandHandler("dxstatus",function(cmd)
 	if not isElement(dxStatus["window"]) then
-		dxStatus["window"] = dgsCreateAnimationWindow(sW/2-250,sH/2-150,500,305,"Dx Status",false,tocolor(20,20,200,255),_,_,tocolor(80,140,200,255),_,tocolor(0,0,0,200))
+		dxStatus["window"] = dgsCreateAnimationWindow(sW/2-350,sH/2-250,700,505,"Dx Status",false,tocolor(20,20,200,255),_,_,tocolor(80,140,200,255),_,tocolor(0,0,0,200))
 		dgsWindowSetSizable(dxStatus["window"],false)
 		dgsBringToFront(dxStatus["window"])
 		outputCmdMessage(cmd,"Dx Status Monitor: ON")
@@ -122,6 +182,19 @@ dgsCmdAddCommandHandler("dxstatus",function(cmd)
 	else
 		outputCmdMessage(cmd,"Dx Status Monitor: OFF")
 		dgsCloseWindow(dxStatus["window"])
+	end
+end)
+
+dgsCmdAddCommandHandler("performancebrowser",function(cmd)
+	if not isElement(performanceBrowser["window"]) then
+		performanceBrowser["window"] = dgsCreateAnimationWindow(sW/2-450,sH/2-250,900,505,"Performance Browser",false,tocolor(20,20,200,255),_,_,tocolor(80,140,200,255),_,tocolor(0,0,0,200))
+		dgsWindowSetSizable(performanceBrowser["window"],false)
+		dgsBringToFront(performanceBrowser["window"])
+		outputCmdMessage(cmd,"Performance Browser Status Monitor: ON")
+		dgsShowCursor(true,"dx")
+	else
+		outputCmdMessage(cmd,"Performance Browser Monitor: OFF")
+		dgsCloseWindow(performanceBrowser["window"])
 	end
 end)
 
@@ -148,65 +221,8 @@ dgsCmdAddCommandHandler("help",function(cmd)
 	outputCmdMessage(cmd," netstatus")
 	outputCmdMessage(cmd," serial")
 	outputCmdMessage(cmd," version")
+	outputCmdMessage(cmd," performancebrowser")
 end)
-
---[[
-dgsCmdAddCommandHandler("getping",function(cmd,times,time)
-	times = times or 1
-	time = time or 500
-	setTimer(function(cmd)
-		if not isElement(cmd) then killTimer(selfTimer) end
-		outputCmdMessage(cmd,"Ping:"..getPlayerPing(localPlayer).." ms")
-	end,time,times,cmd)
-end)
-
-dgsCmdAddCommandHandler("pos",function(cmd,playern)
-    local player = localPlayer
-    if playern then
-        player = getPlayerFromName(playern) or player
-    end
-    local x,y,z = getElementPosition(player)
-    outputCmdMessage(cmd,"Player:"..getPlayerName(player))
-    outputCmdMessage(cmd,"X:"..x)
-    outputCmdMessage(cmd,"Y:"..y)
-    outputCmdMessage(cmd,"Z:"..z)
-    outputCmdMessage(cmd,"Interoir:"..getElementInterior(localPlayer))
-    outputCmdMessage(cmd,"Dimension:"..getElementDimension(localPlayer))
-end)
-
-dgsCmdAddCommandHandler("getvehid",function(cmd)
-    if isPedInVehicle(localPlayer) then
-        local veh = getPedOccupiedVehicle(localPlayer)
-        outputCmdMessage(cmd,"Current Vehicle ID:"..getElementModel(veh))
-    else
-        outputCmdMessage(cmd,"Are you in a vehicle?")
-    end
-end)
-
-dgsCmdAddCommandHandler("gettarvehid",function(cmd)
-    local target = getPedTarget(localPlayer)
-    if isElement(target) and getElementType(target) == "vehicle" then
-        outputCmdMessage(cmd,"Target Vehicle ID:"..getElementModel(target))
-    else
-        outputCmdMessage(cmd,"No target vehicle")
-    end
-end)
-
-dgsCmdAddCommandHandler("getvehstate",function(cmd)
-    local veh = getPedOccupiedVehicle(localPlayer)
-    if isElement(veh) then
-        outputCmdMessage(cmd,"Current Vehicle ID:"..getElementModel(veh))
-        outputConsole("Current Vehicle ID:"..getElementModel(veh))
-        local x,y,z = getElementPosition(veh)
-        outputCmdMessage(cmd,"Current Vehicle Position: x:"..x.." y:"..y.." z:"..z)
-        outputConsole("Current Vehicle Position: x:"..x.." y:"..y.." z:"..z)
-        local rx,ry,rz = getElementRotation(veh)
-        outputCmdMessage(cmd,"Current Vehicle Rotation: x:"..rx.." y:"..ry.." z:"..rz)
-        outputConsole("Current Vehicle Rotation: x:"..rx.." y:"..ry.." z:"..rz)
-    else
-        outputCmdMessage(cmd,"Are you in a vehicle?")
-    end
-end)]]
 
 dgsCmdAddCommandHandler("exit",function(cmd)
     if isElement(cmdSystem["window"]) then
@@ -370,6 +386,7 @@ function dgsCreateAnimationWindow(...)
 	tabl[3] = 60
 	tabl[4] = 25
 	local window = dgsCreateWindow(unpack(tabl))
+	dgsSetProperty(window,"textSize",{1.5,1.5})
 	dgsSetProperty(window,"outline",{"out",1,tocolor(100,100,100,255)})
 	dgsSetData(window,"animated",1)
 	dgsMoveTo(window,x,y+sy/2-12.5,false,false,"OutQuad",200)
@@ -479,13 +496,120 @@ addEventHandler("onAnimationWindowCreate",root,function()
 		end)
 		
 	elseif source == dxStatus["window"] then
-		dxStatus["dxList"] = dgsCreateGridList(10,10,480,260,false,dxStatus["window"],_,tocolor(0,0,0,100),white,tocolor(0,0,0,100),tocolor(0,0,0,0),tocolor(100,100,100,100),tocolor(200,200,200,150))
-		dgsGridListAddColumn(dxStatus["dxList"],"Name",0.55)
-		dgsGridListAddColumn(dxStatus["dxList"],"Value",0.35)
+		dxStatus["dxList"] = dgsCreateGridList(10,10,680,460,false,dxStatus["window"],_,tocolor(0,0,0,100),white,tocolor(0,0,0,100),tocolor(0,0,0,0),tocolor(100,100,100,100),tocolor(200,200,200,150))
+		dgsGridListSetSortEnabled(dxStatus["dxList"],false)
+		dgsSetProperty(dxStatus["dxList"],"rowHeight",25)
+		dgsSetProperty(dxStatus["dxList"],"columnHeight",25)
+		dgsSetProperty(dxStatus["dxList"],"rowTextSize",{1.5,1.5})
+		dgsSetProperty(dxStatus["dxList"],"columnTextSize",{1.5,1.5})
+		dgsGridListAddColumn(dxStatus["dxList"],"Name",0.5)
+		dgsGridListAddColumn(dxStatus["dxList"],"Value",0.46)
 		local scrollBars = dgsGridListGetScrollBar(dxStatus["dxList"])
 		dgsSetProperty(scrollBars[1],"scrollArrow",false)
 		dgsSetProperty(scrollBars[2],"scrollArrow",false)
 		dgsSetProperty(dxStatus["dxList"],"mode",true)
 		addEventHandler("onClientRender",root,dxStatusUpdate)
+	elseif source == performanceBrowser["window"] then
+		performanceBrowser["dxList"] = dgsCreateGridList(10,10,130,460,false,performanceBrowser["window"])
+		dgsSetProperty(performanceBrowser["dxList"],"columnHeight",0)
+		dgsSetProperty(performanceBrowser["dxList"],"rowHeight",40)
+		dgsSetProperty(performanceBrowser["dxList"],"rowTextSize",{1.5,1.5})
+		dgsGridListAddColumn(performanceBrowser["dxList"],"",1)
+		local k = 0
+		for v,t in pairs(pBCat) do
+			k=k+1
+			dgsGridListAddRow(performanceBrowser["dxList"],_,v)
+			performanceBrowser[k] = dgsCreateGridList(140,10,750,460,false,performanceBrowser["window"])
+			dgsGridListSetSortEnabled(performanceBrowser[k],false)
+			dgsSetProperty(performanceBrowser[k],"rowHeight",25)
+			dgsSetProperty(performanceBrowser[k],"columnHeight",25)
+			dgsSetProperty(performanceBrowser[k],"columnTextSize",{1.5,1.5})
+			dgsSetProperty(performanceBrowser[k],"rowTextSize",{1.5,1.5})
+			for index,name in ipairs(t) do
+				dgsGridListAddColumn(performanceBrowser[k],name,0.3)
+			end
+			addEventHandler("onDgsElementRender",performanceBrowser[k],function()
+				--[[local tick = getTickCount()
+				if dgsElementData[source].myType == "Lua timing" then
+					if tick - dgsElementData[source].startTick <= 5000 then
+						return
+					end
+				end]]
+				dgsElementData[source].startTick = tick
+				local columns,rows = getPerformanceStats(dgsGetProperty(source,"myType"),"d")
+				local rowData = dgsGetProperty(source,"rowData")
+				local count = 0
+				if #rows < #rowData then
+					for i=1,#rowData-#rows do
+						dgsGridListRemoveRow(source,#rowData)
+					end
+				elseif #rows > #rowData then
+					for i=1,#rows-#rowData do
+						dgsGridListAddRow(source)
+					end
+				end
+				for row,value in ipairs(rows) do
+					for k,v in pairs(value) do
+						rowData[row][k] = {v,white}
+					end
+				end
+				dgsSetProperty(source,"rowData",rowData)
+			end,false)
+			dgsSetProperty(performanceBrowser[k],"renderEventCall",true)
+			dgsSetProperty(performanceBrowser[k],"myType",v)
+			dgsSetProperty(performanceBrowser[k],"myIndex",k)
+			dgsSetProperty(performanceBrowser[k],"startTick",getTickCount()-5000)
+			dgsSetVisible(performanceBrowser[k],false)
+		end
+		addEventHandler("onDgsGridListSelect",performanceBrowser["dxList"],function(new,_,old)
+			if old ~= -1 then
+				dgsSetVisible(performanceBrowser[old],false)
+			end
+			if new == -1 then
+				dgsGridListSetSelectedItem(performanceBrowser["dxList"],old)
+			else
+				dgsSetVisible(performanceBrowser[new],true)
+			end
+		end,false)
+		dgsGridListSetSelectedItem(performanceBrowser["dxList"],1)
+	end
+end)
+
+---------About DGS (Contributed by Ahmed Ly)
+AboutDGS = {}
+AboutDGS.coolDown = 0
+function createAboutDGS()
+	if not isElement(AboutDGS.window) then
+		if getTickCount()-AboutDGS.coolDown < 5000 then return outputChatBox("[DGS]Operation is too frequent, try later",255,0,0) end
+		triggerServerEvent("DGSI_RequestAboutData",localPlayer,localPlayer)
+		AboutDGS.window = dgsCreateWindow(sW/2-350, sH/2-200, 700, 400, "About DGS", false)
+		dgsWindowSetSizable(AboutDGS.window, false)
+		showCursor(true)
+		dgsSetAlpha(AboutDGS.window,0)
+		dgsAlphaTo(AboutDGS.window,1,false,"InQuad",500)
+		setTimer(function()
+			if isElement(AboutDGS.window) then
+				AboutDGS.content = dgsCreateMemo(10, 5, 680, 360, "Loading...", false,AboutDGS.window)
+				dgsSetProperty(AboutDGS.content,"bgColor",tocolor(0,0,0,50))
+				dgsMemoSetReadOnly(AboutDGS.content,true)
+			end
+		end,500,1)
+		addEventHandler("onDgsWindowClose",AboutDGS.window,function()
+			cancelEvent()
+			dgsAlphaTo(source,0,false,"InQuad",500)
+			showCursor(false)
+			setTimer(function(source)
+				destroyElement(source)
+			end,500,1,source)
+		end)
+	else
+		dgsCloseWindow(AboutDGS.window)
+	end
+end
+addCommandHandler ("aboutdgs", createAboutDGS )
+
+addEventHandler("DGSI_SendAboutData",root,function(Data)
+	if isElement(AboutDGS.content) then
+		dgsSetText(AboutDGS.content,Data)
 	end
 end)
