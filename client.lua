@@ -1,10 +1,6 @@
 focusBrowser()
 ------------Copyrights thisdp's DirectX Graphical User Interface System
 --Speed Up
---[[
-local applyColorAlpha = function(...)
-	return exports[getResourceName(getThisResource())]:applyColorAlpha(...)
-end]]
 local abs = math.abs
 local find = string.find
 local rep = string.rep
@@ -58,9 +54,7 @@ dgsRenderSetting = {
 }
 dgsRenderer = {}
 
-function dgsGetRenderSetting(name)
-	return dgsRenderSetting[name]
-end
+function dgsGetRenderSetting(name) return dgsRenderSetting[name] end
 
 function dgsSetRenderSetting(name,value)
 	if name == "renderPriority" then
@@ -393,7 +387,7 @@ function renderGUI(source,mx,my,enabled,rndtgt,position,OffsetX,OffsetY,parentAl
 				absSize = eleData.externalFunction.dgsGetPosition(eleData.externalRef,false)
 			end
 		end
-		
+	
 		--Side Processing
 		local PosX,PosY,w,h = 0,0,0,0
 		if eleTypeP == "dgs-dxwindow" then
@@ -788,9 +782,7 @@ function onClientKeyTriggered(button)
 							break
 						else
 							nextSelected = nextSelected-1
-							if nextSelected-1 < 1 then
-								break
-							end
+							if nextSelected-1 < 1 then break end
 						end
 					end
 				end
