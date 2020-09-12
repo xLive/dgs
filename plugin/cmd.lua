@@ -2,10 +2,10 @@
 eventHandlers = {}
 
 function dgsCreateCmd(x,y,sx,sy,relative,parent)
-	assert(tonumber(x),"Bad argument @dgsCreateCmd at argument 1, expect number [ got "..type(x).." ]")
-	assert(tonumber(y),"Bad argument @dgsCreateCmd at argument 2, expect number [ got "..type(y).." ]")
-	assert(tonumber(sx),"Bad argument @dgsCreateCmd at argument 3, expect number [ got "..type(sx).." ]")
-	assert(tonumber(sy),"Bad argument @dgsCreateCmd at argument 4, expect number [ got "..type(sy).." ]")
+	assert(type(x) == "number","Bad argument @dgsCreateCmd at argument 1, expect number [ got "..type(x).." ]")
+	assert(type(y) == "number","Bad argument @dgsCreateCmd at argument 2, expect number [ got "..type(y).." ]")
+	assert(type(sx) == "number","Bad argument @dgsCreateCmd at argument 3, expect number [ got "..type(sx).." ]")
+	assert(type(sy) == "number","Bad argument @dgsCreateCmd at argument 4, expect number [ got "..type(sy).." ]")
 	local cmdMemo = dgsCreateMemo(x,y,sx,sy,"",relative,parent)
 	dgsMemoSetReadOnly(cmdMemo,true)
 	dgsSetData(cmdMemo,"asPlugin","dgs-dxcmd")
@@ -161,7 +161,9 @@ function outputCmdMessage(cmd,str)
 	assert(dgsGetPluginType(cmd) == "dgs-dxcmd","Bad argument @outputCmdMessage at argument 1, expect plugin dgs-dxcmd [ got "..dgsGetPluginType(cmd).." ]")
 	dgsMemoAppendText(cmd,str.."\n",true)
 	local textTable = dgsElementData[cmd].text
-	dgsMemoSetCaretPosition(cmd,textTable[#textTable][-1])
+	local toLine = #textTable
+	local toIndex = utf8.len(textTable[toLine][0])
+	dgsMemoSetCaretPosition(cmd,toIndex,toLine)
 end
 
 function receiveCmdEditInput(cmd,str)

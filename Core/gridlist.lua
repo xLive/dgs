@@ -30,13 +30,13 @@ Selection Mode
 3-> Cell Selection
 ]]
 function dgsCreateGridList(x,y,sx,sy,relative,parent,columnHeight,bgColor,columnTextColor,columnColor,rownorc,rowhovc,rowselc,bgImage,columnImage,rownori,rowhovi,rowseli)
-	assert(tonumber(x),"Bad argument @dgsCreateGridList at argument 1, expect number got "..type(x))
-	assert(tonumber(y),"Bad argument @dgsCreateGridList at argument 2, expect number got "..type(y))
-	assert(tonumber(sx),"Bad argument @dgsCreateGridList at argument 3, expect number got "..type(sx))
-	assert(tonumber(sy),"Bad argument @dgsCreateGridList at argument 4, expect number got "..type(sy))
+	assert(type(x) == "number","Bad argument @dgsCreateGridList at argument 1, expect number got "..type(x))
+	assert(type(y) == "number","Bad argument @dgsCreateGridList at argument 2, expect number got "..type(y))
+	assert(type(sx) == "number","Bad argument @dgsCreateGridList at argument 3, expect number got "..type(sx))
+	assert(type(sy) == "number","Bad argument @dgsCreateGridList at argument 4, expect number got "..type(sy))
 	local gridlist = createElement("dgs-dxgridlist")
-	local _x = dgsIsDxElement(parent) and dgsSetParent(gridlist,parent,true,true) or tableInsert(CenterFatherTable,gridlist)
 	dgsSetType(gridlist,"dgs-dxgridlist")
+	dgsSetParent(gridlist,parent,true,true)
 	dgsSetData(gridlist,"renderBuffer",{})
 	dgsSetData(gridlist,"bgImage",bgImage or dgsCreateTextureFromStyle(styleSettings.gridlist.bgImage))
 	dgsSetData(gridlist,"bgColor",bgColor or styleSettings.gridlist.bgColor)
@@ -531,11 +531,12 @@ function dgsGridListAutoSizeColumn(gridlist,pos,additionalLength,relative)
 	assert(type(pos) == "number","Bad argument @dgsGridListSetColumnWidth at argument 2, expect number got "..dgsGetType(pos))
 	local columnData = dgsElementData[gridlist].columnData
 	assert(columnData[pos],"Bad argument @dgsGridListSetColumnWidth at argument 2, column index is out of range [min 1, max "..#columnData..", got "..pos.."]")
+	assert(type(additionalLength) == "number" or (not additionalLength and not relative),"Bad argument @dgsGridListSetColumnWidth at argument 3, expect number got "..dgsGetType(additionalLength))
 	local text = dgsGridListGetColumnTitle(gridlist,pos)
 	local textSizeX = columnData[pos][7]
 	local font = columnData[pos][9] or dgsElementData[gridlist].font
 	local wid = dxGetTextWidth(text,textSizeX,font)
-	local wid = wid+(relative and additionalLength*wid or additionalLength)
+	local wid = wid+(relative and additionalLength*wid or (additionalLength or 0)+wid)
 	dgsGridListSetColumnWidth(gridlist,pos,wid,false)
 	return true
 end

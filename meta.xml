@@ -221,6 +221,8 @@
 	<export function="dgs3DInterfaceGetAttachedOffsets" type="client" />
 	<export function="dgs3DInterfaceSetDimension" type="client" />
 	<export function="dgs3DInterfaceGetDimension" type="client" />
+	<export function="dgs3DInterfaceSetInterior" type="client" />
+	<export function="dgs3DInterfaceGetInterior" type="client" />
 	<export function="dgs3DInterfaceSetRotation" type="client" />
 	<export function="dgs3DInterfaceGetRotation" type="client" />
 
@@ -289,6 +291,8 @@
 	<export function="dgsComboBoxGetEditEnabled" type="client" />
 	<export function="dgsComboBoxGetText" type="client" />
 	<export function="dgsComboBoxGetItemCount" type="client" />
+	<export function="dgsComboBoxSetViewCount" type="client" />
+	<export function="dgsComboBoxGetViewCount" type="client" />
 
 	<export function="dgsCreateButton" type="client" />
 
@@ -359,6 +363,8 @@
 	<export function="dgsMemoGetScrollBarState" type="client" />
 	<export function="dgsMemoGetLineLength" type="client" />
 	<export function="dgsMemoGetLineCount" type="client" />
+	<export function="dgsMemoGetMaxLength" type="client" />
+	<export function="dgsMemoSetMaxLength" type="client" />
 
 	<export function="dgsCreateMediaBrowser" type="client" />
 	<export function="dgsMediaLoadMedia" type="client" />

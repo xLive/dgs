@@ -49,8 +49,8 @@ function dgsCreateEdit(x,y,sx,sy,text,relative,parent,textColor,scalex,scaley,bg
 	assert(type(sy) == "number","Bad argument @dgsCreateEdit at argument 4, expect number, got "..type(sy))
 	text = tostring(text)
 	local edit = createElement("dgs-dxedit")
-	local _x = dgsIsDxElement(parent) and dgsSetParent(edit,parent,true,true) or tableInsert(CenterFatherTable,edit)
 	dgsSetType(edit,"dgs-dxedit")
+	dgsSetParent(edit,parent,true,true)
 	dgsSetData(edit,"renderBuffer",{})
 	dgsSetData(edit,"bgColor",bgColor or styleSettings.edit.bgColor)
 	dgsSetData(edit,"bgImage",bgImage or dgsCreateTextureFromStyle(styleSettings.edit.bgImage))
@@ -1008,7 +1008,8 @@ dgsRenderer["dgs-dxedit"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,
 				selStartX = selStartX-selStartX%1
 				if caretStyle == 0 then
 					if selStartX+1 >= x+sidelength and selStartX <= x+w-sidelength then
-						local selStartY = h/2-h/2*caretHeight+sideheight
+						local offset = eleData.caretOffset
+						local selStartY = h/2-h/2*caretHeight+sideheight-offset
 						local selEndY = (h/2-selStartY)*2
 						dxDrawLine(selStartX,y+selStartY,selStartX,y+selEndY+selStartY,caretColor,eleData.caretThick,isPostGUI)
 					end

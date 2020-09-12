@@ -142,10 +142,10 @@ ProgressBarStyle = {
 }
 
 function dgsCreateProgressBar(x,y,sx,sy,relative,parent,bgImage,bgColor,indicatorImage,indicatorColor,indicatorMode)
-	assert(tonumber(x),"Bad argument @dgsCreateProgressBar at argument 1, expect number got "..type(x))
-	assert(tonumber(y),"Bad argument @dgsCreateProgressBar at argument 2, expect number got "..type(y))
-	assert(tonumber(sx),"Bad argument @dgsCreateProgressBar at argument 3, expect number got "..type(sx))
-	assert(tonumber(sy),"Bad argument @dgsCreateProgressBar at argument 4, expect number got "..type(sy))
+	assert(type(x) == "number","Bad argument @dgsCreateProgressBar at argument 1, expect number got "..type(x))
+	assert(type(y) == "number","Bad argument @dgsCreateProgressBar at argument 2, expect number got "..type(y))
+	assert(type(sx) == "number","Bad argument @dgsCreateProgressBar at argument 3, expect number got "..type(sx))
+	assert(type(sy) == "number","Bad argument @dgsCreateProgressBar at argument 4, expect number got "..type(sy))
 	if isElement(bgImage) then
 		local imgtyp = getElementType(bgImage)
 		assert(imgtyp == "texture" or imgtyp == "shader","Bad argument @dgsCreateProgressBar at argument 7, expect texture got "..getElementType(bgImage))
@@ -155,8 +155,8 @@ function dgsCreateProgressBar(x,y,sx,sy,relative,parent,bgImage,bgColor,indicato
 		assert(imgtyp == "texture" or imgtyp == "shader","Bad argument @dgsCreateProgressBar at argument 9, expect texture got "..getElementType(indicatorImage))
 	end
 	local progressbar = createElement("dgs-dxprogressbar")
-	local _ = dgsIsDxElement(parent) and dgsSetParent(progressbar,parent,true,true) or table.insert(CenterFatherTable,progressbar)
 	dgsSetType(progressbar,"dgs-dxprogressbar")
+	dgsSetParent(progressbar,parent,true,true)
 	dgsSetData(progressbar,"renderBuffer",{})
 	dgsSetData(progressbar,"bgColor",bgColor or styleSettings.progressbar.bgColor)
 	dgsSetData(progressbar,"bgImage",bgImage or dgsCreateTextureFromStyle(styleSettings.progressbar.bgImage))

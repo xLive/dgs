@@ -34,13 +34,13 @@ index:	-2			-1					0					1
 ]]
 
 function dgsCreateComboBox(x,y,sx,sy,caption,relative,parent,itemheight,textColor,scalex,scaley,defimg,hovimg,cliimg,defcolor,hovcolor,clicolor)
-	assert(tonumber(x),"Bad argument @dgsCreateComboBox at argument 1, expect number got "..type(x))
-	assert(tonumber(y),"Bad argument @dgsCreateComboBox at argument 2, expect number got "..type(y))
-	assert(tonumber(sx),"Bad argument @dgsCreateComboBox at argument 3, expect number got "..type(sx))
-	assert(tonumber(sy),"Bad argument @dgsCreateComboBox at argument 4, expect number got "..type(sy))
+	assert(type(x) == "number","Bad argument @dgsCreateComboBox at argument 1, expect number got "..type(x))
+	assert(type(y) == "number","Bad argument @dgsCreateComboBox at argument 2, expect number got "..type(y))
+	assert(type(sx) == "number","Bad argument @dgsCreateComboBox at argument 3, expect number got "..type(sx))
+	assert(type(sy) == "number","Bad argument @dgsCreateComboBox at argument 4, expect number got "..type(sy))
 	local combobox = createElement("dgs-dxcombobox")
-	local _x = dgsIsDxElement(parent) and dgsSetParent(combobox,parent,true,true) or tableInsert(CenterFatherTable,combobox)
 	dgsSetType(combobox,"dgs-dxcombobox")
+	dgsSetParent(combobox,parent,true,true)
 	dgsSetData(combobox,"renderBuffer",{})
 
 	local defcolor = defcolor or styleSettings.combobox.color[1]
@@ -78,6 +78,7 @@ function dgsCreateComboBox(x,y,sx,sy,caption,relative,parent,itemheight,textColo
 	dgsSetData(combobox,"clip",false)
 	dgsSetData(combobox,"wordbreak",false)
 	dgsSetData(combobox,"itemHeight",itemheight or styleSettings.combobox.itemHeight)
+	dgsSetData(combobox,"viewCount",false,true)
 	dgsSetData(combobox,"colorcoded",false)
 	dgsSetData(combobox,"listState",-1,true)
 	dgsSetData(combobox,"listStateAnim",-1)
@@ -357,14 +358,14 @@ function dgsComboBoxClear(combobox)
 end
 
 function dgsComboBoxCreateBox(x,y,sx,sy,relative,parent)
-	assert(tonumber(x),"Bad argument @dgsComboBoxCreateBox at argument 1, expect number got "..type(x))
-	assert(tonumber(y),"Bad argument @dgsComboBoxCreateBox at argument 2, expect number got "..type(y))
-	assert(tonumber(sx),"Bad argument @dgsComboBoxCreateBox at argument 3, expect number got "..type(sx))
-	assert(tonumber(sy),"Bad argument @dgsComboBoxCreateBox at argument 4, expect number got "..type(sy))
+	assert(type(x) == "number","Bad argument @dgsComboBoxCreateBox at argument 1, expect number got "..type(x))
+	assert(type(y) == "number","Bad argument @dgsComboBoxCreateBox at argument 2, expect number got "..type(y))
+	assert(type(sx) == "number","Bad argument @dgsComboBoxCreateBox at argument 3, expect number got "..type(sx))
+	assert(type(sy) == "number","Bad argument @dgsComboBoxCreateBox at argument 4, expect number got "..type(sy))
 	assert(dgsGetType(parent) == "dgs-dxcombobox","Bad argument @dgsComboBoxCreateBox at argument 6, expect dgs-dxcombobox got "..dgsGetType(parent))
 	local box = createElement("dgs-dxcombobox-Box")
-	local _x = dgsIsDxElement(parent) and dgsSetParent(box,parent,true,true) or tableInsert(CenterFatherTable,box)
 	dgsSetType(box,"dgs-dxcombobox-Box")
+	dgsSetParent(box,parent,true,true)
 	insertResource(sourceResource,box)
 	calculateGuiPositionSize(box,x,y,relative or false,sx,sy,relative or false,true)
 	triggerEvent("onDgsCreate",box)
@@ -483,6 +484,21 @@ function dgsComboBoxGetScrollPosition(combobox)
 	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetScrollPosition at at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
 	local scb = dgsElementData[combobox].scrollbar
 	return dgsScrollBarGetScrollPosition(scb)
+end
+
+function dgsComboBoxSetViewCount(combobox,count)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxSetViewCount at at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	if type(count) == "number" then
+		dgsSetData(combobox,"viewCount",count,true)
+		return dgsComboBoxSetBoxHeight (combobox,count * dgsGetData(combobox,"itemHeight"))
+	else
+		return dgsSetData (combobox,"viewCount",false,true)
+	end
+end
+
+function dgsComboBoxGetViewCount(combobox,count)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetViewCount at at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	return dgsElementData[combobox].viewCount
 end
 
 ----------------------------------------------------------------
