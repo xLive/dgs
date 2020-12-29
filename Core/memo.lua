@@ -1108,7 +1108,6 @@ function checkMMScrollBar(source,new,old)
 			if isWordWrap then
 				local mapTable = dgsElementData[memo].wordWrapMapText
 				local temp = math.max(mathFloor((#mapTable-canHold)*new*0.01)+1,1)
-				print(temp,getTickCount())
 				local wordWrapShowLine = dgsElementData[memo].wordWrapShowLine
 				wordWrapShowLine[3] = temp
 				local startStrongLine
@@ -1540,12 +1539,12 @@ dgsRenderer["dgs-dxmemo"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,
 						if eleData.caretStyle == 0 then
 							local selStartY = py+lineStart+fontHeight*(1-caretHeight)
 							local selEndY = py+lineStart+fontHeight*caretHeight
-							dxDrawLine(px+width-showPos-1,selStartY,px+width-showPos-1,selEndY,caretColor,eleData.caretThick,noRenderTarget)
+							dxDrawLine(px+width-showPos-1,selStartY,px+width-showPos-1,selEndY,caretColor,eleData.caretThick,isPostGUI)
 						elseif eleData.caretStyle == 1 then
 							local cursorWidth = dxGetTextWidth(utf8Sub(theText,cursorPX+1,cursorPX+1),txtSizX,font)
 							cursorWidth = cursorWidth ~= 0 and cursorWidth or txtSizX*8
 							local offset = eleData.caretOffset
-							dxDrawLine(px+width-showPos,py+ph-4+offset,px+width-showPos+cursorWidth+2,py+ph-4+offset,caretColor,eleData.caretThick,noRenderTarget)
+							dxDrawLine(px+width-showPos,py+ph-4+offset,px+width-showPos+cursorWidth+2,py+ph-4+offset,caretColor,eleData.caretThick,isPostGUI)
 						end
 					end
 				end

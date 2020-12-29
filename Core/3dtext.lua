@@ -123,6 +123,16 @@ end
 ----------------------------------------------------------------
 --------------------------Renderer------------------------------
 ----------------------------------------------------------------
+
+local g_canBeBlocked = {
+	checkBuildings = true,
+	checkVehicles = true,
+	checkPeds = true,
+	checkObjects = true,
+	checkDummies = true,
+	seeThroughStuff = false,
+	ignoreSomeObjectsForCamera = false,
+}
 dgsRenderer["dgs-dx3dtext"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleData,parentAlpha,isPostGUI,rndtgt)
 	local attachTable = eleData.attachTo
 	local posTable = eleData.position
@@ -146,13 +156,26 @@ dgsRenderer["dgs-dx3dtext"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleDat
 		local distance = ((wx-camX)^2+(wy-camY)^2+(wz-camZ)^2)^0.5
 		if distance <= maxDistance and distance > 0 then
 			local canBeBlocked = eleData.canBeBlocked
+			if canBeBlocked then
+				if canBeBlocked == true then
+					canBeBlocked = g_canBeBlocked
+				end
+				if canBeBlocked.checkBuildings == nil then canBeBlocked.checkBuildings = g_canBeBlocked.checkBuildings end
+				if canBeBlocked.checkVehicles == nil then canBeBlocked.checkVehicles = g_canBeBlocked.checkVehicles end
+				if canBeBlocked.checkPeds == nil then canBeBlocked.checkPeds = g_canBeBlocked.checkPeds end
+				if canBeBlocked.checkObjects == nil then canBeBlocked.checkObjects = g_canBeBlocked.checkObjects end
+				if canBeBlocked.checkDummies == nil then canBeBlocked.checkDummies = g_canBeBlocked.checkDummies end
+				if canBeBlocked.seeThroughStuff == nil then canBeBlocked.seeThroughStuff = g_canBeBlocked.seeThroughStuff end
+				if canBeBlocked.ignoreSomeObjectsForCamera == nil then canBeBlocked.ignoreSomeObjectsForCamera = g_canBeBlocked.ignoreSomeObjectsForCamera end
+			end
 			local textSizeX,textSizeY = eleData.textSize[1],eleData.textSize[2]
 			local colorcoded = eleData.colorcoded
 			local fadeDistance = eleData.fadeDistance
 			local text = eleData.text
 			local font = eleData.font or systemFont
 			local subPixelPositioning = eleData.subPixelPositioning
-			if (not canBeBlocked or (canBeBlocked and isLineOfSightClear(wx, wy, wz, camX, camY, cam))) then
+			print(canBeBlocked.checkBuildings)
+			if (not canBeBlocked or (canBeBlocked and isLineOfSightClear(wx, wy, wz, camX, camY, camZ, canBeBlocked.checkBuildings, canBeBlocked.checkVehicles, canBeBlocked.checkPeds, canBeBlocked.checkObjects, canBeBlocked.checkDummies, canBeBlocked.seeThroughStuff,canBeBlocked.ignoreSomeObjectsForCamera))) then
 				local fadeMulti = 1
 				if maxDistance > fadeDistance and distance >= fadeDistance then
 					fadeMulti = 1-(distance-fadeDistance)/(maxDistance-fadeDistance)

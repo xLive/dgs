@@ -1,7 +1,6 @@
 ﻿<meta>
 	<info type="script" name="dgs" description="thisdp's directx graphic user interface system" author="thisdp" version="3.5" />
 	<file src="html/media.html" />
-	<file src="html/pasteHandler.html" />
 	<file src="styleManager/styleMapper.lua"/>
 
 	<script src="server.lua" type="server" />
@@ -35,9 +34,13 @@
 	<script src="functions.lua" type="client" />
 	<script src="plugin/media.lua" type="client" />
 	<script src="animation.lua" type="client" />
+
 	<script src="plugin/pluginManager.lua" type="client" />
+
 	<script src="plugin/objPrevSupport.lua" type="client" />
+
 	<script src="plugin/cmd.lua" type="client" />
+
 	<script src="plugin/ColorPicker/colorPicker.lua" type="client" />
 	<file src="plugin/ColorPicker/HSVRingSel.fx" type="client" />
 	<file src="plugin/ColorPicker/HSVRing.fx" type="client" />
@@ -49,18 +52,32 @@
 	<file src="plugin/ColorPicker/HSVComponent.fx" type="client" />
 	<file src="plugin/ColorPicker/RGBComponent.fx" type="client" />
 	<file src="plugin/ColorPicker/ALPComponent.fx" type="client" />
+
 	<script src="plugin/Effect3D.lua" type="client" />
+
 	<script src="plugin/roundRect.lua" type="client" />
+
 	<script src="plugin/QRCode.lua" type="client" />
+
 	<script src="plugin/remoteImage.lua" type="client" />
-	<script src="plugin/mask/mask.lua" type="client" />
+
 	<script src="plugin/canvas.lua" type="client" />
+
 	<script src="plugin/nineSlice.lua" type="client" />
+
 	<script src="plugin/BlurBox.lua" type="client" />
+
 	<script src="plugin/circle.lua" type="client" />
+
+	<script src="plugin/pasteHandler/pasteHandler.lua" type="client"/>
+	<file src="plugin/pasteHandler/pasteHandler.html" />
+
+	<script src="plugin/mask/mask.lua" type="client" />
 	<file src="plugin/mask/maskTexture.fx" type="client" />
 	<file src="plugin/mask/mask-Circle.fx" type="client" />
 	<file src="plugin/mask/mask-BackGroundFilter.fx" type="client" />
+
+
 	<script src="styleManager/styleManager.lua" type="client" />
 	<script src="dxCmdEvent.lua" type="client" />
 	<script src="update.lua" type="server" />
@@ -179,6 +196,9 @@
 	<export function="dgsGetBrowser" type="client" />
 	<export function="dgsAttachToAutoDestroy" type="client" />
 	<export function="dgsDetachFromAutoDestroy" type="client" />
+	<export function="dgsGetDetectArea" type="client" />
+	<export function="dgsApplyDetectArea" type="client" />
+	<export function="dgsRemoveDetectArea" type="client" />
 
 	<export function="dgsTranslationTableExists" type="client" />
 	<export function="dgsSetTranslationTable" type="client" />
@@ -293,6 +313,11 @@
 	<export function="dgsComboBoxGetItemCount" type="client" />
 	<export function="dgsComboBoxSetViewCount" type="client" />
 	<export function="dgsComboBoxGetViewCount" type="client" />
+	<export function="dgsComboBoxSetItemFont" type="client" />
+	<export function="dgsComboBoxGetItemFont" type="client" />
+	<export function="dgsComboBoxSetItemImage" type="client" />
+	<export function="dgsComboBoxGetItemImage" type="client" />
+	<export function="dgsComboBoxRemoveItemImage" type="client" />
 
 	<export function="dgsCreateButton" type="client" />
 
@@ -436,6 +461,12 @@
 	<export function="dgsScrollBarGetLocked" type="client" />
 	<export function="dgsScrollBarSetGrades" type="client" />
 	<export function="dgsScrollBarGetGrades" type="client" />
+	<export function="dgsScrollBarSetCursorWidth" type="client" />
+	<export function="dgsScrollBarGetCursorWidth" type="client" />
+	<export function="dgsScrollBarSetTroughWidth" type="client" />
+	<export function="dgsScrollBarGetTroughWidth" type="client" />
+	<export function="dgsScrollBarSetArrowSize" type="client" />
+	<export function="dgsScrollBarGetArrowSize" type="client" />
 
 	<export function="dgsCreateSelector" type="client" />
 	<export function="dgsSelectorAddItem" type="client" />
@@ -618,6 +649,13 @@
 	<export function="dgsRequestQRCode" type="client" />
 	<export function="dgsGetQRCodeLoaded" type="client" />
 
+	<export function="dgsEnablePasteHandler" type="client" />
+	<export function="dgsFocusPasteHandler" type="client" />
+	<export function="dgsIsPasteHandlerFocused" type="client" />
+	<export function="dgsBlurPasteHandler" type="client" />
+	<export function="dgsDisablePasteHandler" type="client" />
+	<export function="dgsIsPasteHandlerEnabled" type="client" />
+
 	<export function="dgsCreateCanvas" type="client" />
 
 	<export function="dgsCenterElement" type="client" />
@@ -626,7 +664,6 @@
 	<export function="dgsImportFunction" type="client" />
 	<export function="dgsImportOOPClass" type="client" />
 	<export function="dgsG2DLoadHooker" type="client" />
-	<export function="dgsConfigureTDX" type="client" />
 
 	<min_mta_version server="1.5.4-9.11342" client="1.5.7-9.20157" />
 	<aclrequest>

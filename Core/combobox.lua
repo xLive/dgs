@@ -241,10 +241,13 @@ function dgsComboBoxAddItem(combobox,text)
 		text = dgsTranslate(combobox,text,sourceResource)
 	end
 	local tab = {
-		[-3] = dgsElementData[combobox].itemTextSize,
-		[-2] = dgsElementData[combobox].itemTextColor,
-		[-1] = dgsElementData[combobox].itemImage,
-		[0] = dgsElementData[combobox].itemColor,
+		[-6] = nil,										--built-in image {[1]=image,[2]=color,[3]=offsetX,[4]=offsetY,[5]=width,[6]=height,[7]=relative}
+		[-5] = dgsElementData[combobox].colorcoded,		--use color code
+		[-4] = dgsElementData[combobox].font,			--font
+		[-3] = dgsElementData[combobox].itemTextSize,	--text size of item
+		[-2] = dgsElementData[combobox].itemTextColor,	--text color of item
+		[-1] = dgsElementData[combobox].itemImage,		--background image of item
+		[0] = dgsElementData[combobox].itemColor,		--background color of item
 		tostring(text),
 		_translationText = _text
 	}
@@ -306,16 +309,6 @@ function dgsComboBoxSetItemColor(combobox,item,color)
 	return false
 end
 
-function dgsComboBoxSetState(combobox,state)
-	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxSetState at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
-	return dgsSetData(combobox,"listState",state and 1 or -1)
-end
-
-function dgsComboBoxGetState(combobox)
-	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetState at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
-	return dgsElementData[combobox].listState == 1 and true or false
-end
-
 function dgsComboBoxGetItemColor(combobox,item)
 	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetItemColor at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
 	assert(type(item) == "number","@dgsComboBoxGetItemColor argument 2,expect number got "..type(item))
@@ -325,6 +318,83 @@ function dgsComboBoxGetItemColor(combobox,item)
 		return data[item][-2]
 	end
 	return false
+end
+
+function dgsComboBoxSetItemFont(combobox,item,font)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxSetItemFont at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	assert(type(item) == "number","Bad argument @dgsComboBoxSetItemFont at argument 2, expect number got "..type(item))
+	assert(fontBuiltIn[font] or dgsGetType(font) == "dx-font","Bad argument @dgsComboBoxSetItemFont at argument 3, invaild font (Type:"..dgsGetType(font)..",Value:"..tostring(font)..")")
+	local data = dgsElementData[combobox].itemData
+	item = mathFloor(item)
+	if item >= 1 and item <= #data then
+		data[item][-4] = font
+		return true
+	end
+	return false
+end
+
+function dgsComboBoxGetItemFont(combobox,item)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetItemFont at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	assert(type(item) == "number","@dgsComboBoxGetItemFont argument 2,expect number got "..type(item))
+	local data = dgsElementData[combobox].itemData
+	item = mathFloor(item)
+	if item >= 1 and item <= #data then
+		return data[item][-4]
+	end
+	return false
+end
+
+function dgsComboBoxSetItemImage(combobox,item,image,color,offx,offy,w,h,relative)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxSetItemImage at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	assert(type(item) == "number","Bad argument @dgsComboBoxSetItemImage at argument 2, expect number got "..type(item))
+	local data = dgsElementData[combobox].itemData
+	item = mathFloor(item)
+	if item >= 1 and item <= #data then
+		local imageData = data[item][-6] or {}
+		imageData[1] = image or imageData[1]
+		imageData[2] = color or imageData[2] or white
+		imageData[3] = offx or imageData[3] or 0
+		imageData[4] = offy or imageData[4] or 0
+		imageData[5] = w or imageData[5] or relative and 1 or dgsGetSize(combobox)
+		imageData[6] = h or imageData[6] or relative and 1 or dgsElementData[combobox].itemHeight
+		imageData[7] = relative or false
+		data[item][-6] = imageData
+		return true
+	end
+	return false
+end
+
+function dgsComboBoxGetItemImage(combobox,item)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetItemImage at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	assert(type(item) == "number","Bad argument @dgsComboBoxGetItemImage at argument 2, expect number got "..type(item))
+	local data = dgsElementData[combobox].itemData
+	item = mathFloor(item)
+	if item >= 1 and item <= #data then
+		return unpack(data[item][-6] or {})
+	end
+	return false
+end
+
+function dgsComboBoxRemoveItemImage(combobox,item)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxRemoveItemImage at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	assert(type(item) == "number","Bad argument @dgsComboBoxRemoveItemImage at argument 2, expect number got "..type(item))
+	local data = dgsElementData[combobox].itemData
+	item = mathFloor(item)
+	if item >= 1 and item <= #data and data[item][-6] then
+		data[item][-6] = nil
+		return true
+	end
+	return false
+end
+
+function dgsComboBoxSetState(combobox,state)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxSetState at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	return dgsSetData(combobox,"listState",state and 1 or -1)
+end
+
+function dgsComboBoxGetState(combobox)
+	assert(dgsGetType(combobox) == "dgs-dxcombobox","Bad argument @dgsComboBoxGetState at argument 1, expect dgs-dxcombobox got "..dgsGetType(combobox))
+	return dgsElementData[combobox].listState == 1 and true or false
 end
 
 function dgsComboBoxRemoveItem(combobox,item)
@@ -510,28 +580,22 @@ dgsRenderer["dgs-dxcombobox"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleD
 	end
 	local captionEdit = eleData.captionEdit
 	local colors,imgs = eleData.color,eleData.image
-	local colorimgid = 1
+	local selectState = 1
 	local textBox = eleData.textBox
-	local buttonLen_t = eleData.buttonLen
-	local buttonLen
-	if textBox then
-		buttonLen = buttonLen_t[2] and buttonLen_t[1]*h or buttonLen_t[1]
-	else
-		buttonLen = w
-	end
+	local buttonLen = textBox and (eleData.buttonLen[2] and eleData.buttonLen[1]*h or eleData.buttonLen[1]) or w
 	if MouseData.enter == source then
-		colorimgid = 2
+		selectState = 2
 		if eleData.clickType == 1 then
 			if MouseData.clickl == source then
-				colorimgid = 3
+				selectState = 3
 			end
 		elseif eleData.clickType == 2 then
 			if MouseData.clickr == source then
-				colorimgid = 3
+				selectState = 3
 			end
 		else
 			if MouseData.clickl == source or MouseData.clickr == source then
-				colorimgid = 3
+				selectState = 3
 			end
 		end
 	end
@@ -544,15 +608,15 @@ dgsRenderer["dgs-dxcombobox"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleD
 			local average = (r+g+b)/3*eleData.disabledColorPercent
 			finalcolor = tocolor(average,average,average,a*parentAlpha)
 		else
-			finalcolor = colors[colorimgid]
+			finalcolor = colors[selectState]
 		end
 	else
-		finalcolor = applyColorAlpha(colors[colorimgid],parentAlpha)
+		finalcolor = applyColorAlpha(colors[selectState],parentAlpha)
 	end
 	local bgColor = eleData.bgColor or finalcolor
 	local bgImage = eleData.bgImage
-	if imgs[colorimgid] then
-		dxDrawImage(x+w-buttonLen,y,buttonLen,h,imgs[colorimgid],0,0,0,finalcolor,isPostGUI)
+	if imgs[selectState] then
+		dxDrawImage(x+w-buttonLen,y,buttonLen,h,imgs[selectState],0,0,0,finalcolor,isPostGUI)
 	else
 		dxDrawRectangle(x+w-buttonLen,y,buttonLen,h,finalcolor,isPostGUI)
 	end
@@ -581,18 +645,28 @@ dgsRenderer["dgs-dxcombobox"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleD
 	dxSetShaderValue(shader,"ocolor",{r/255,g/255,b/255,a/255*parentAlpha})
 	dxDrawImage(x+textBoxLen,y,buttonLen,h,shader,0,0,0,white,isPostGUI)
 	if textBox and not captionEdit then
-		local itemTextPadding = eleData.textPadding
-		local font = eleData.font or systemFont
-		local textColor = eleData.textColor
+		local item = eleData.itemData[eleData.select] or {}
+		local itemTextPadding = dgsElementData[source].itemTextPadding
+		local font = item[-4] or eleData.font or systemFont
+		local textColor = item[-2] or eleData.textColor
 		local rb = eleData.alignment
-		local txtSizX,txtSizY = eleData.textSize[1],eleData.textSize[2] or eleData.textSize[1]
-		local colorcoded = eleData.colorcoded
+		local txtSizX,txtSizY = item[-3] and item[-3][1] or eleData.textSize[1],item[-3] and (item[-3][2] or item[-3][1]) or eleData.textSize[2] or eleData.textSize[1]
+		local colorcoded = item[-5] or eleData.colorcoded
 		local shadow = eleData.shadow
 		local wordbreak = eleData.wordbreak
-		local selection = eleData.select
-		local itemData = eleData.itemData
-		local sele = itemData[selection]
-		local text = sele and sele[1] or eleData.caption
+		local text = item[1] or eleData.caption
+		local image = item[-6]
+		if image then
+			local imagex = x+(image[7] and image[3]*textBoxLen or image[3])
+			local imagey = y+(image[7] and image[4]*h or image[4])
+			local imagew = image[7] and image[5]*textBoxLen or image[5]
+			local imageh = image[7] and image[6]*h or image[6]
+			if isElement(image[1]) then
+				dxDrawImage(imagex,imagey,imagew,imageh,image[1],0,0,0,applyColorAlpha(image[2],parentAlpha),isPostGUI)
+			else
+				dxDrawRectangle(imagex,imagey,imagew,imageh,applyColorAlpha(image[2],parentAlpha),isPostGUI)
+			end
+		end
 		local nx,ny,nw,nh = x+itemTextPadding[1],y,x+textBoxLen-itemTextPadding[2],y+h
 		if shadow then
 			dxDrawText(text:gsub("#%x%x%x%x%x%x",""),nx-shadow[1],ny-shadow[2],nw-shadow[1],nh-shadow[2],applyColorAlpha(shadow[3],parentAlpha),txtSizX,txtSizY,font,rb[1],rb[2],clip,wordbreak,isPostGUI)
@@ -638,29 +712,41 @@ dgsRenderer["dgs-dxcombobox-Box"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,
 		end
 		local preSelect = DataTab.preSelect
 		local Select = DataTab.select
-		local font = DataTab.font
 		local shadow = dgsElementData[combo].shadow
-		local colorcoded = eleData.colorcoded
 		local wordbreak = eleData.wordbreak
 		local clip = eleData.clip
 		local itemTextPadding = dgsElementData[combo].itemTextPadding
 		for i=DataTab.FromTo[1],DataTab.FromTo[2] do
-			local lc_rowData = itemData[i]
-			local textSize = lc_rowData[-3]
-			local textColor = lc_rowData[-2]
-			local image = lc_rowData[-1]
-			local color = lc_rowData[0]
+			local item = itemData[i]
+			local textSize = item[-3]
+			local textColor = item[-2]
+			local image = item[-1]
+			local color = item[0]
+			local font = item[-4]
+			local colorcoded = item[-5]
 			local itemState = 1
 			itemState = i == preSelect and 2 or itemState
 			itemState = i == Select and 3 or itemState
-			local rowpos = i*itemHeight
-			local rowpos_1 = (i-1)*itemHeight
+			local rowpos = (i-1)*itemHeight
 			if image[itemState] then
-				dxDrawImage(0,rowpos_1+itemMoveOffset,w,itemHeight,image[itemState],0,0,0,color[itemState])
+				dxDrawImage(0,rowpos+itemMoveOffset,w,itemHeight,image[itemState],0,0,0,color[itemState])
 			else
-				dxDrawRectangle(0,rowpos_1+itemMoveOffset,w,itemHeight,color[itemState])
+				dxDrawRectangle(0,rowpos+itemMoveOffset,w,itemHeight,color[itemState])
 			end
-			local _y,_sx,_sy = rowpos_1+itemMoveOffset,sW-itemTextPadding[2],rowpos+itemMoveOffset
+			local rowImage = item[-6]
+			if rowImage then
+				local itemWidth = dgsElementData[scrollbar].visible and w-dgsElementData[scrollbar].absSize[1] or w
+				local imagex = rowImage[7] and rowImage[3]*itemWidth or rowImage[3]
+				local imagey = (rowpos+itemMoveOffset) + (rowImage[7] and rowImage[4]*itemHeight or rowImage[4])
+				local imagew = rowImage[7] and rowImage[5]*itemWidth or rowImage[5]
+				local imageh = rowImage[7] and rowImage[6]*itemHeight or rowImage[6]
+				if isElement(rowImage[1]) then
+					dxDrawImage(imagex,imagey,imagew,imageh,rowImage[1],0,0,0,rowImage[2])
+				else
+					dxDrawRectangle(imagex,imagey,imagew,imageh,rowImage[2])
+				end
+			end
+			local _y,_sx,_sy = rowpos+itemMoveOffset,sW-itemTextPadding[2],rowpos+itemHeight+itemMoveOffset
 			local text = itemData[i][1]
 			if shadow then
 				dxDrawText(text:gsub("#%x%x%x%x%x%x",""),itemTextPadding[1]-shadow[1],_y-shadow[2],_sx-shadow[1],_sy-shadow[2],shadow[3],textSize[1],textSize[2],font,rb_l[1],rb_l[2],clip,wordbreak)

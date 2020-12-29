@@ -261,6 +261,22 @@ function dgsDetachElements(dgsElement)
 	return dgsSetData(dgsElement,"attachedTo",false)
 end
 
+function dgsApplyDetectArea(dgsEle,da)
+	assert(dgsIsDxElement(dgsEle),"Bad argument @dgsApplyDetectArea at argument 1, expect a dgs-dxgui element got "..dgsGetType(dgsEle))
+	assert(dgsGetType(da) == "dgs-dxdetectarea","Bad argument @dgsApplyDetectArea at argument 2, expect a dgs-dxdetectarea element got "..dgsGetType(da))
+	return dgsSetData(dgsEle,"dgsCollider",da)
+end
+
+function dgsRemoveDetectArea(dgsEle)
+	assert(dgsIsDxElement(dgsEle),"Bad argument @dgsRemoveDetectArea at argument 1, expect a dgs-dxgui element got "..dgsGetType(dgsEle))
+	return dgsSetData(dgsEle,"dgsCollider",nil)
+end
+
+function dgsGetDetectArea(dgsEle)
+	assert(dgsIsDxElement(dgsEle),"Bad argument @dgsGetDetectArea at argument 1, expect a dgs-dxgui element got "..dgsGetType(dgsEle))
+	return dgsElementData[dgsEle].dgsCollider or false
+end
+
 function dgsSetVisible(dgsEle,visible)
 	assert(dgsIsDxElement(dgsEle),"Bad argument @dgsSetVisible at argument 1, expect a dgs-dxgui element got "..dgsGetType(dgsEle))
 	if type(dgsEle) == "table" then
@@ -287,10 +303,10 @@ end
 
 function dgsGetVisible(dgsEle)
 	assert(dgsIsDxElement(dgsEle),"Bad argument @dgsGetVisible at argument 1, expect a dgs-dxgui element got "..dgsGetType(dgsEle))
-	for i=1,5000 do --Limited to 5000 to make sure there won't be able to make an infinity loop
+	for i=1,5000 do								--Limited to 5000 to make sure there won't be able to make an infinity loop
 		if not dgsElementData[dgsEle].visible then return false end	--check and return false if dgsEle is invisible
-		dgsEle = FatherTable[dgsEle]--if it is visible, check whether its parent hides it
-		if not dgsEle then return true end--if it doesn't have parent, return true as visible
+		dgsEle = FatherTable[dgsEle]			--if it is visible, check whether its parent hides it
+		if not dgsEle then return true end		--if it doesn't have parent, return true as visible
 	end
 end
 
@@ -414,10 +430,10 @@ end
 
 function dgsGetEnabled(dgsEle)
 	assert(dgsIsDxElement(dgsEle),"Bad argument @dgsGetEnabled at argument 1, expect a dgs-dxgui element got "..dgsGetType(dgsEle))
-	for i=1,5000 do --Limited to 5000 to make sure there won't be able to make an infinity loop
+	for i=1,5000 do 							--Limited to 5000 to make sure there won't be able to make an infinity loop
 		if not dgsElementData[dgsEle].enabled then return false end	--check and return false if dgsEle is disabled
-		dgsEle = FatherTable[dgsEle]--if it is enabled, check whether its parent hides it
-		if not dgsEle then return true end--if it doesn't have parent, return true as enabled
+		dgsEle = FatherTable[dgsEle]			--if it is enabled, check whether its parent hides it
+		if not dgsEle then return true end		--if it doesn't have parent, return true as enabled
 	end
 end
 
@@ -843,6 +859,10 @@ function dgsAttachToTranslation(dgsEle,name)
 		LanguageTranslationAttach[name] = LanguageTranslationAttach[name] or {}
 		tableInsert(LanguageTranslationAttach[name],dgsEle)
 	end
+	local text = dgsElementData[dgsEle]._translationText
+	if text then
+		dgsSetData(dgsEle,"text",text)
+	end
 	return true
 end
 
@@ -894,12 +914,17 @@ function dgsTranslate(dgsEle,textTable,sourceResource)
 		local value = translation and LanguageTranslation[translation] and LanguageTranslation[translation][textTable[1]] or textTable[1]
 		local count = 2
 		while true do
-			if not textTable[count] then break end
-			local _value = value:gsub("%%rep%%",textTable[count],1)
+			local textArg = textTable[count]
+			if not textArg then break end
+			if type(textArg) == "table" then
+				textArg = dgsTranslate(dgsEle,textArg,sourceResource)
+			end
+			local _value = value:gsub("%%rep%%",textArg,1)
 			if _value == value then break end
 			count = count+1
 			value = _value
 		end
+		value = value:gsub("%%rep%%","")
 		return value
 	end
 	return false
