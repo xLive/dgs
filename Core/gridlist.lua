@@ -70,7 +70,8 @@ function dgsCreateGridList(x,y,sx,sy,relative,parent,columnHeight,bgColor,column
 	dgsSetData(gridlist,"rowShadow",false)
 	dgsSetData(gridlist,"rowMoveOffset",0,true)
 	dgsSetData(gridlist,"rowMoveOffsetTemp",0)
-	dgsSetData(gridlist,"moveHardness",0.1,true)
+	dgsSetData(gridlist,"moveHardness",{0.1,0.9},true)
+	dgsSetData(gridlist,"moveType",0,true)	--0 for wheel, 1 For scroll bar
 	dgsSetData(gridlist,"rowHeight",styleSettings.gridlist.rowHeight)
 	dgsGridListSetSortFunction(gridlist,sortFunctions_upper)
 	dgsElementData[gridlist].nextRenderSort = false
@@ -102,7 +103,7 @@ function dgsCreateGridList(x,y,sx,sy,relative,parent,columnHeight,bgColor,column
 	dgsSetData(gridlist,"scrollSize",60)	--60 pixels
 	dgsSetData(gridlist,"scrollBarLength",{},true)
 	dgsAttachToTranslation(gridlist,resourceTranslation[sourceResource or getThisResource()])
-	dgsSetData(gridlist,"configNextFrame",false)
+	dgsElementData[gridlist].configNextFrame = false
 	calculateGuiPositionSize(gridlist,x,y,relative or false,sx,sy,relative or false,true)
 	local aSize = dgsElementData[gridlist].absSize
 	local abx,aby = aSize[1],aSize[2]
@@ -340,7 +341,7 @@ function dgsGridListAddColumn(gridlist,name,len,pos,alignment)
 			font,
 		}
 	end
-	dgsSetData(gridlist,"configNextFrame",true)
+	dgsElementData[gridlist].configNextFrame = true
 	return pos
 end
 
@@ -652,7 +653,6 @@ function dgsGridListAddRow(gridlist,row,...)
 	if not (#columnData > 0) then assert(false,"Bad argument @dgsGridListAddRow, no columns in the grid list") end
 	local args = {...}
 	local rowData = eleData.rowData
-	local rowLength = 0
 	row = tonumber(row) or #rowData+1
 	local rowTable = {
 		[-4] = eleData.defaultColumnOffset,
@@ -664,7 +664,6 @@ function dgsGridListAddRow(gridlist,row,...)
 	local rowTxtColor = eleData.rowTextColor
 	local colorcoded = eleData.colorcoded
 	local scale = eleData.rowTextSize
-	local font = eleData.font
 	for i=1,#eleData.columnData do
 		local text,_text = args[i]
 		if type(text) == "table" then
@@ -682,7 +681,7 @@ function dgsGridListAddRow(gridlist,row,...)
 		}
 	end
 	tableInsert(rowData,row,rowTable)
-	dgsSetData(gridlist,"configNextFrame",true)
+	dgsElementData[gridlist].configNextFrame = true
 	return row
 end
 
@@ -692,6 +691,53 @@ function dgsGridListInsertRowAfter(gridlist,row,...)
 	local columnData = eleData.columnData
 	assert(#columnData > 0 ,"Bad argument @dgsGridListInsertRowAfter, no columns in the grid list")
 	return dgsGridListAddRow(gridlist,row+1,...)
+end
+
+function dgsGridListAddRows(gridlist,row,t,isRawData)
+	if not (dgsGetType(gridlist) == "dgs-dxgridlist") then assert(false,"Bad argument @dgsGridListAddRows at argument 1, expect dgs-dxgridlist got "..dgsGetType(gridlist)) end
+	local eleData = dgsElementData[gridlist]
+	local columnData = eleData.columnData
+	if not (#columnData > 0) then assert(false,"Bad argument @dgsGridListAddRows, no columns in the grid list") end
+	if not (type(t) == "table") then assert(false,"Bad argument @dgsGridListAddRows at argument 3, expect table got "..dgsGetType(t)) end
+	local rowData = eleData.rowData
+	row = tonumber(row) or #rowData
+	if isRawData then
+		for i=1,#t do
+			tableInsert(rowData,row+i,t[i])	--This will skip language check
+		end
+	else
+		for i=1,#t do
+			local rowTable = {
+				[-4] = eleData.defaultColumnOffset,
+				[-3] = eleData.rowImage,
+				[-2] = true,
+				[-1] = true,
+				[0] = eleData.rowColor,
+			}
+			local rowTxtColor = eleData.rowTextColor
+			local colorcoded = eleData.colorcoded
+			local scale = eleData.rowTextSize
+			for col=1,#eleData.columnData do
+				local text,_text = t[i][col]
+				if type(text) == "table" then
+					_text = text
+					text = dgsTranslate(gridlist,text,sourceResource)
+				end
+				rowTable[col] = {
+					tostring(text or ""),
+					rowTxtColor,
+					colorcoded,
+					scale[1],
+					scale[2],
+					font,
+					_translationText=_text,
+				}
+			end
+			tableInsert(rowData,row+i,rowTable)
+		end
+	end
+	dgsElementData[gridlist].configNextFrame = true
+	return true
 end
 
 function dgsGridListSetItemFont(gridlist,row,column,font)
@@ -889,7 +935,7 @@ function dgsGridListRemoveRow(gridlist,row)
 		return false
 	end
 	table.remove(rowData,row)
-	dgsSetData(gridlist,"configNextFrame",true)
+	dgsElementData[gridlist].configNextFrame = true
 	return true
 end
 
@@ -1553,7 +1599,7 @@ function configGridList(gridlist)
 		end
 	end
 	dgsGridListUpdateRowMoveOffset(gridlist)
-	dgsSetData(gridlist,"configNextFrame",false)
+	dgsElementData[gridlist].configNextFrame = false
 end
 
 function dgsGridListResetScrollBarPosition(gridlist,vertical,horizontal)
@@ -1717,14 +1763,16 @@ dgsRenderer["dgs-dxgridlist"] = function(source,x,y,w,h,mx,my,cx,cy,enabled,eleD
 	local rowHeightLeadingTemp = rowHeight+leading
 	--Smooth Row
 	local _rowMoveOffset = eleData.rowMoveOffset
-	eleData.rowMoveOffsetTemp = lerp(eleData.moveHardness,eleData.rowMoveOffsetTemp,_rowMoveOffset)
+	local rowMoveHardness = dgsElementData[ scrollbars[1] ].moveType == "slow" and eleData.moveHardness[1] or eleData.moveHardness[2]
+	eleData.rowMoveOffsetTemp = lerp(rowMoveHardness,eleData.rowMoveOffsetTemp,_rowMoveOffset)
 	local rowMoveOffset = eleData.rowMoveOffsetTemp-eleData.rowMoveOffsetTemp%1
 	if (rowMoveOffset~=_rowMoveOffset) then
 		dgsGridListUpdateRowMoveOffset(source)
 	end
 	--Smooth Column
 	local _columnMoveOffset = eleData.columnMoveOffset
-	eleData.columnMoveOffsetTemp = lerp(eleData.moveHardness,eleData.columnMoveOffsetTemp,_columnMoveOffset)
+	local columnMoveHardness  = dgsElementData[ scrollbars[2] ].moveType == "slow" and eleData.moveHardness[1] or eleData.moveHardness[2]
+	eleData.columnMoveOffsetTemp = lerp(columnMoveHardness,eleData.columnMoveOffsetTemp,_columnMoveOffset)
 	local columnMoveOffset = eleData.columnMoveOffsetTemp-eleData.columnMoveOffsetTemp%1
 	--
 	local columnOffset = eleData.columnOffset

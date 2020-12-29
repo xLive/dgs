@@ -506,6 +506,7 @@
 	<export function="dgsGridListSetColumnTextSize" type="client" />
 	<export function="dgsGridListInsertRowAfter" type="client" />
 	<export function="dgsGridListAddRow" type="client" />
+	<export function="dgsGridListAddRows" type="client" />
 	<export function="dgsGridListRemoveRow" type="client" />
 	<export function="dgsGridListClearRow" type="client" />
 	<export function="dgsGridListClearColumn" type="client" />
@@ -668,7 +669,6 @@
 	<min_mta_version server="1.5.4-9.11342" client="1.5.7-9.20157" />
 	<aclrequest>
 		<right name="function.fetchRemote" access="true" />
-		<right name="function.getClientIP" access="true" />
 		<right name="general.ModifyOtherObjects" access="true" />
 	</aclrequest>
 	<download_priority_group>999</download_priority_group>
